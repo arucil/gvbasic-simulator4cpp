@@ -1,0 +1,13 @@
+﻿  正在跳过...(未检测到相关更改)
+  tree.cpp
+  test.cpp
+  lex.cpp
+  gvbrun.cpp
+  gvbc.cpp
+  gc.cpp
+  file.cpp
+  error.cpp
+  debug.cpp
+  condev.cpp
+  LINK : 没有找到 D:\My Projects\C++\GVBASIC\Debug\GVB.exe 或上一个增量链接没有生成它；正在执行完全链接
+  GVB.vcxproj -> D:\My Projects\C++\GVBASIC\Debug\GVB.exe
