@@ -1,0 +1,12 @@
+1 234 12345 3.14  3.  .3  0.  .0  .0005  3E2  3e+3 2.1e-3  1e38
+ "abc" "ha
+abc^+-*/>=<>==<<=> "ABC"
+dim,len.swap(for:to;next)%pop pop$ pop% cls1                            
+
+dIm Let sWaP GOTO if then else on for to next step while wend def fn gosub return
+not and or read data restore input print locate inverse play beep graph text draw
+line box circle ellipse open close put get lset rset cont pop rem clear write
+as poke call cls field end tab spc inkey$
+
+
+"left
