@@ -1,25 +1,57 @@
 #include <cstdlib>
+#include <cassert>
 #include "lex.h"
 
 using namespace std;
 using namespace gvbsim;
 
-#define __kw(s)  { #s, Token::s }
 
-Lexer::Lexer(FILE *fp) : fp(fp), tok(0), c(' '), kwmap {
-      __kw(DIM), __kw(LET), __kw(SWAP), __kw(GOTO), __kw(IF), __kw(THEN),
-      __kw(ELSE), __kw(ON), __kw(FOR), __kw(TO), __kw(NEXT), __kw(STEP),
-      __kw(WHILE), __kw(WEND), __kw(DEF), __kw(FN), __kw(GOSUB), __kw(RETURN),
-      __kw(NOT), __kw(AND), __kw(OR), __kw(READ), __kw(DATA), __kw(RESTORE),
-      __kw(INPUT), __kw(PRINT), __kw(LOCATE), __kw(INVERSE),
-      __kw(PLAY), __kw(BEEP), __kw(GRAPH), __kw(TEXT), __kw(DRAW), __kw(LINE),
-      __kw(BOX), __kw(CIRCLE), __kw(ELLIPSE), __kw(OPEN), __kw(CLOSE),
-      __kw(PUT), __kw(GET), __kw(LSET), __kw(RSET), __kw(CONT), __kw(POP),
-      __kw(REM), __kw(CLEAR), __kw(WRITE), __kw(AS), __kw(POKE), __kw(CALL),
-      __kw(CLS), __kw(FIELD), __kw(END), __kw(TAB), __kw(SPC), __kw(SLEEP),
+#define k(s)   case s: return #s
+
+const char *Token::toString(int tok) {
+   switch (tok) {
+   k(DIM); k(LET); k(SWAP); k(GOTO); k(IF); k(THEN); k(ELSE); k(ON); k(FOR);
+   k(TO); k(NEXT); k(STEP); k(WHILE); k(WEND); k(DEF); k(FN); k(GOSUB);
+   k(RETURN); k(NOT); k(AND); k(OR); k(READ); k(DATA); k(RESTORE); k(INPUT);
+   k(PRINT); k(LOCATE); k(INVERSE); k(PLAY); k(BEEP); k(GRAPH); k(TEXT);
+   k(DRAW); k(LINE); k(BOX); k(CIRCLE); k(ELLIPSE); k(OPEN); k(CLOSE);
+   k(PUT); k(GET); k(LSET); k(RSET); k(CONT); k(POP); k(REM); k(CLEAR);
+   k(WRITE); k(AS); k(POKE); k(CALL); k(CLS); k(FIELD); k(END); k(TAB);
+   k(SPC); k(SLEEP);
+   case Token::INKEY: return "INKEY$";
+   case -1: return "EOF";
+   case 10: return "EOL";
+   case ID: return "id";
+   case REAL: return "real";
+   case INT: return "int";
+   case STRING: return "string";
+   default:
+      assert(0);
+   }
+}
+
+#undef k
+
+
+#define kw(s)  { #s, Token::s }
+
+Lexer::Lexer(FILE *fp) : fp(fp), c(' '),
+                         kwmap {
+      kw(DIM), kw(LET), kw(SWAP), kw(GOTO), kw(IF), kw(THEN),
+      kw(ELSE), kw(ON), kw(FOR), kw(TO), kw(NEXT), kw(STEP),
+      kw(WHILE), kw(WEND), kw(DEF), kw(FN), kw(GOSUB), kw(RETURN),
+      kw(NOT), kw(AND), kw(OR), kw(READ), kw(DATA), kw(RESTORE),
+      kw(INPUT), kw(PRINT), kw(LOCATE), kw(INVERSE),
+      kw(PLAY), kw(BEEP), kw(GRAPH), kw(TEXT), kw(DRAW), kw(LINE),
+      kw(BOX), kw(CIRCLE), kw(ELLIPSE), kw(OPEN), kw(CLOSE),
+      kw(PUT), kw(GET), kw(LSET), kw(RSET), kw(CONT), kw(POP),
+      kw(REM), kw(CLEAR), kw(WRITE), kw(AS), kw(POKE), kw(CALL),
+      kw(CLS), kw(FIELD), kw(END), kw(TAB), kw(SPC), kw(SLEEP),
       { "INKEY$", Token::INKEY }
    } {
 }
+
+#undef kw
 
 int Lexer::peek() {
    return c = (feof(fp) ? -1 : std::getc(fp));
@@ -43,33 +75,33 @@ void Lexer::skipSpace() {
       peek();
 }
 
-int Lexer::getToken() throw (int) {
+int Lexer::getToken() {
    while (' ' == c || 0xd == c)
       peek();
 
    switch (c) {
    case 0xa:
       peek();
-      return tok = 0xa;
+      return 0xa;
    case '<':
       if (peek('>'))
-         return tok = Token::NEQ;
+         return Token::NEQ;
       else if ('=' == c) {
          peek();
-         return tok = Token::LE;
+         return Token::LE;
       }
-      return tok = '<';
+      return '<';
    case '>':
       if (peek('='))
-         return tok = Token::GE;
-      return tok = '>';
+         return Token::GE;
+      return '>';
    case '"':
       sval.clear();
       while (peek() != '"' && c != 0xd && c != -1 && c != 0xa)
          sval += static_cast<char>(c);
       if ('"' == c)
          peek();
-      return tok = Token::STRING;
+      return Token::STRING;
    }
 
    if (c >= '0' && c <= '9' || '.' == c) {
@@ -81,7 +113,7 @@ int Lexer::getToken() throw (int) {
       // 超过4位当做浮点数
       if (c != '.' && c != 'E' && c != 'e' && sval.size() < 5) {
          ival = std::atoi(sval.c_str());
-         return tok = Token::INT;
+         return Token::INT;
       }
 
       if ('.' == c) {
@@ -89,7 +121,7 @@ int Lexer::getToken() throw (int) {
             sval += static_cast<char>(c);
          } while (peek() >= '0' && c <= '9');
          if (1 == sval.size())
-            return tok = '.';
+            return '.';
       }
 
       if ('E' == c || 'e' == c) {
@@ -110,7 +142,7 @@ int Lexer::getToken() throw (int) {
       rval = std::strtod(pp, &ppp);
       if (ppp - pp != sval.size())
          throw 1;
-      return tok = Token::REAL;
+      return Token::REAL;
    }
 
    if (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z') {
@@ -125,10 +157,10 @@ int Lexer::getToken() throw (int) {
       }
       auto i = kwmap.find(sval);
       if (kwmap.end() == i)
-         return tok = Token::ID;
-      return tok = i->second;
+         return Token::ID;
+      return i->second;
    }
-   tok = c;
+   int t = c;
    peek();
-   return tok;
+   return t;
 }

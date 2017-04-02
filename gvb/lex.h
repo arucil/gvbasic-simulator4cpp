@@ -4,7 +4,6 @@
 #include <string>
 #include <cstdio>
 #include <unordered_map>
-#include "common.h"
 
 namespace gvbsim {
 
@@ -17,11 +16,12 @@ struct Token {
       CLEAR, WRITE, AS, POKE, CALL, CLS, FIELD, END, GE, LE, NEQ, TAB, SPC,
       SLEEP,
    };
+
+   static const char *toString(int tok);
 };
 
 class Lexer {
 public:
-   int tok;
    int32_t ival;
    double rval;
    std::string sval;
@@ -29,14 +29,14 @@ public:
 public:
    int getc();
    void skipSpace();
-   int getToken() throw (int);
+   int getToken();
 
    Lexer(FILE *);
 
 private:
    int c;
    FILE *fp;
-   std::unordered_map<std::string, int> kwmap;
+   const std::unordered_map<std::string, int> kwmap;
 
 private:
    int peek();
