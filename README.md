@@ -48,7 +48,7 @@ GVBASIC模拟器的Win32版本, 使用C++编写.
 		- ```OPEN A$ FOR BINARY AS #n```  
 			打开二进制文件  
 			和RANDOM模式类似, 区别是BINARY不会新建文件, 并且不能用LEN
-      - ```FPUTC fnum, c$```  
+      - ```FPUTC fnum, m_c$```  
 			写入c$的第一字节, 用于RANDOM / BINARY
       - ```FREAD fnum, addr, size```  
 			从文件读取`size`字节到地址`addr`, 用于RANDOM / BINARY

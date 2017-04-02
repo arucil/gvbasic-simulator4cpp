@@ -1,7 +1,7 @@
 #ifndef GVBASIC_GVB_H
 #define GVBASIC_GVB_H
 
-#include "node_mgr.h"
+#include "node_man.h"
 
 namespace gvbsim {
 

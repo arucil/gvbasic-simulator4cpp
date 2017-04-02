@@ -343,9 +343,14 @@ public:
 };
 
 struct On : Stmt {
+   union Addr {
+      int label;
+      NewLine *stm;
+   };
+
+public:
    Expr *cond;
-   std::vector<int> labels;
-   std::vector<NewLine *> stms;
+   std::vector<Addr> addrs;
    bool isSub;
 
 public:

@@ -1,5 +1,5 @@
-#ifndef GVBASIC_NODE_MGR_H
-#define GVBASIC_NODE_MGR_H
+#ifndef GVBASIC_NODE_MAN_H
+#define GVBASIC_NODE_MAN_H
 
 #include <type_traits>
 #include "node.h"
@@ -24,7 +24,8 @@ public:
 
 template <typename T, typename... Ts>
 T *NodeManager::make(Ts... args) {
-   static_assert(std::is_base_of<Node, T>::value);
+   static_assert(std::is_base_of<Node, T>::value,
+                 "T must be derived class of Node");
 
    T *p = new T(args...);
    p->node.next = head;

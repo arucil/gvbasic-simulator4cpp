@@ -35,26 +35,26 @@ const char *Token::toString(int tok) {
 
 #define kw(s)  { #s, Token::s }
 
-Lexer::Lexer(FILE *fp) : fp(fp), c(' '),
-                         kwmap {
-      kw(DIM), kw(LET), kw(SWAP), kw(GOTO), kw(IF), kw(THEN),
-      kw(ELSE), kw(ON), kw(FOR), kw(TO), kw(NEXT), kw(STEP),
-      kw(WHILE), kw(WEND), kw(DEF), kw(FN), kw(GOSUB), kw(RETURN),
-      kw(NOT), kw(AND), kw(OR), kw(READ), kw(DATA), kw(RESTORE),
-      kw(INPUT), kw(PRINT), kw(LOCATE), kw(INVERSE),
-      kw(PLAY), kw(BEEP), kw(GRAPH), kw(TEXT), kw(DRAW), kw(LINE),
-      kw(BOX), kw(CIRCLE), kw(ELLIPSE), kw(OPEN), kw(CLOSE),
-      kw(PUT), kw(GET), kw(LSET), kw(RSET), kw(CONT), kw(POP),
-      kw(REM), kw(CLEAR), kw(WRITE), kw(AS), kw(POKE), kw(CALL),
-      kw(CLS), kw(FIELD), kw(END), kw(TAB), kw(SPC), kw(SLEEP),
-      { "INKEY$", Token::INKEY }
-   } {
-}
+const unordered_map<string, int> Lexer::s_kwmap = {
+   kw(DIM), kw(LET), kw(SWAP), kw(GOTO), kw(IF), kw(THEN),
+   kw(ELSE), kw(ON), kw(FOR), kw(TO), kw(NEXT), kw(STEP),
+   kw(WHILE), kw(WEND), kw(DEF), kw(FN), kw(GOSUB), kw(RETURN),
+   kw(NOT), kw(AND), kw(OR), kw(READ), kw(DATA), kw(RESTORE),
+   kw(INPUT), kw(PRINT), kw(LOCATE), kw(INVERSE),
+   kw(PLAY), kw(BEEP), kw(GRAPH), kw(TEXT), kw(DRAW), kw(LINE),
+   kw(BOX), kw(CIRCLE), kw(ELLIPSE), kw(OPEN), kw(CLOSE),
+   kw(PUT), kw(GET), kw(LSET), kw(RSET), kw(CONT), kw(POP),
+   kw(REM), kw(CLEAR), kw(WRITE), kw(AS), kw(POKE), kw(CALL),
+   kw(CLS), kw(FIELD), kw(END), kw(TAB), kw(SPC), kw(SLEEP),
+   { "INKEY$", Token::INKEY }
+};
 
 #undef kw
 
+Lexer::Lexer(FILE *fp) : m_fp(fp), m_c(' ') { }
+
 int Lexer::peek() {
-   return c = (feof(fp) ? -1 : std::getc(fp));
+   return m_c = (feof(m_fp) ? -1 : std::getc(m_fp));
 }
 
 bool Lexer::peek(int ch) {
@@ -65,28 +65,28 @@ bool Lexer::peek(int ch) {
 }
 
 int Lexer::getc() {
-   int d = c;
+   int d = m_c;
    peek();
    return d;
 }
 
 void Lexer::skipSpace() {
-   while (' ' == c)
+   while (' ' == m_c)
       peek();
 }
 
 int Lexer::getToken() {
-   while (' ' == c || 0xd == c)
+   while (' ' == m_c || 0xd == m_c)
       peek();
 
-   switch (c) {
+   switch (m_c) {
    case 0xa:
       peek();
       return 0xa;
    case '<':
       if (peek('>'))
          return Token::NEQ;
-      else if ('=' == c) {
+      else if ('=' == m_c) {
          peek();
          return Token::LE;
       }
@@ -97,42 +97,42 @@ int Lexer::getToken() {
       return '>';
    case '"':
       sval.clear();
-      while (peek() != '"' && c != 0xd && c != -1 && c != 0xa)
-         sval += static_cast<char>(c);
-      if ('"' == c)
+      while (peek() != '"' && m_c != 0xd && m_c != -1 && m_c != 0xa)
+         sval += static_cast<char>(m_c);
+      if ('"' == m_c)
          peek();
       return Token::STRING;
    }
 
-   if (c >= '0' && c <= '9' || '.' == c) {
+   if (m_c >= '0' && m_c <= '9' || '.' == m_c) {
       sval.clear();
-      while (c >= '0' && c <= '9') {
-         sval += static_cast<char>(c);
+      while (m_c >= '0' && m_c <= '9') {
+         sval += static_cast<char>(m_c);
          peek();
       }
       // 超过4位当做浮点数
-      if (c != '.' && c != 'E' && c != 'e' && sval.size() < 5) {
+      if (m_c != '.' && m_c != 'E' && m_c != 'e' && sval.size() < 5) {
          ival = std::atoi(sval.c_str());
          return Token::INT;
       }
 
-      if ('.' == c) {
+      if ('.' == m_c) {
          do {
-            sval += static_cast<char>(c);
-         } while (peek() >= '0' && c <= '9');
+            sval += static_cast<char>(m_c);
+         } while (peek() >= '0' && m_c <= '9');
          if (1 == sval.size())
             return '.';
       }
 
-      if ('E' == c || 'e' == c) {
+      if ('E' == m_c || 'e' == m_c) {
          sval += 'E';
          peek();
-         if ('+' == c || '-' == c) {
-            sval += static_cast<char>(c);
+         if ('+' == m_c || '-' == m_c) {
+            sval += static_cast<char>(m_c);
             peek();
          }
-         while (c >= '0' && c <= '9') {
-            sval += static_cast<char>(c);
+         while (m_c >= '0' && m_c <= '9') {
+            sval += static_cast<char>(m_c);
             peek();
          }
       }
@@ -145,22 +145,22 @@ int Lexer::getToken() {
       return Token::REAL;
    }
 
-   if (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z') {
+   if (m_c >= 'A' && m_c <= 'Z' || m_c >= 'a' && m_c <= 'z') {
       sval.clear();
       do {
-         sval += toupper(c);
-      } while (peek() >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
-            || c >= 'a' && c <= 'z');
-      if ('%' == c || '$' == c) {
-         sval += static_cast<char>(c);
+         sval += toupper(m_c);
+      } while (peek() >= 'A' && m_c <= 'Z' || m_c >= '0' && m_c <= '9'
+            || m_c >= 'a' && m_c <= 'z');
+      if ('%' == m_c || '$' == m_c) {
+         sval += static_cast<char>(m_c);
          peek();
       }
-      auto i = kwmap.find(sval);
-      if (kwmap.end() == i)
+      auto i = s_kwmap.find(sval);
+      if (s_kwmap.end() == i)
          return Token::ID;
       return i->second;
    }
-   int t = c;
+   int t = m_c;
    peek();
    return t;
 }

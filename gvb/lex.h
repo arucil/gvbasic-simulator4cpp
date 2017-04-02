@@ -34,9 +34,10 @@ public:
    Lexer(FILE *);
 
 private:
-   int c;
-   FILE *fp;
-   const std::unordered_map<std::string, int> kwmap;
+   int m_c;
+   FILE *m_fp;
+
+   static const std::unordered_map<std::string, int> s_kwmap;
 
 private:
    int peek();

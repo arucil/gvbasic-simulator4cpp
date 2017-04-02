@@ -10,6 +10,16 @@ set(SOURCE_FILES gvb/lex.h
         gvb/random.h
         gvb/real.h
         gvb/real.cpp
-        gvb/gvb.h gvb/node_mgr.h gvb/node.h gvb/node_mgr.cpp gvb/compile.h gvb/compile.cpp gvb/error.h gvb/gvb.cpp gvb/value.cpp)
+        gvb/gvb.h
+        gvb/node_man.h
+        gvb/node.h
+        gvb/node_man.cpp
+        gvb/compile.h
+        gvb/compile.cpp
+        gvb/error.h
+        gvb/gvb.cpp
+        gvb/value.cpp
+        gvb/data_man.h
+        gvb/data_man.cpp)
 
 add_executable(GVBASIC ${SOURCE_FILES})

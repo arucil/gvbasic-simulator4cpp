@@ -1,4 +1,4 @@
-#include "node_mgr.h"
+#include "node_man.h"
 
 using namespace gvbsim;
 
