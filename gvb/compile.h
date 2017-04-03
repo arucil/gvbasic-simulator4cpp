@@ -68,6 +68,8 @@ private:
    Stmt *findLabel(On *);
    int getFileNum();
 
+   Stmt *translate(Stmt *, Stmt *end = nullptr);
+
    Expr *expr(Value::Type);
    Expr *expr();
    Expr *E_(int prec);

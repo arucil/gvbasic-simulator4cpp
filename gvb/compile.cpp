@@ -69,7 +69,7 @@ Stmt *Compiler::compile() {
    }
    resolveRefs();
 
-   return head;
+   return translate(head);
 }
 
 inline void Compiler::resolveRefs() { //解决label引用
@@ -1081,6 +1081,69 @@ Id *Compiler::getId() {
    } else {
       return m_nodeMan.make<Id>(id, vt);
    }
+}
+
+Stmt *Compiler::translate(Stmt *head, Stmt *end) {
+   Stmt *cur = head, *prev = nullptr;
+
+   while (cur != end) {
+      switch (cur->type) {
+      default:
+Ldefault:
+         prev = cur;
+         cur = cur->next;
+         break;
+      case Stmt::Type::IF: {
+         If *i = static_cast<If *>(cur);
+         i->stmThen = translate(i->stmThen, cur->next);
+         if (i->stmElse)
+            i->stmElse = translate(i->stmElse, cur->next);
+         goto Ldefault;
+      }
+      case Stmt::Type::ASSIGN:
+         /* for i=1 to n:next
+          * for i=0 to n:next         ==>  sleep n
+          * 10 ... : for i=1 to n
+          * 20 next
+          * */
+         if (cur->next != end && cur->next->type == Stmt::Type::FOR) {
+            Assign *a1 = static_cast<Assign *>(cur);
+            if (a1->val->type == Expr::Type::REAL) {
+               Real *r = static_cast<Real *>(a1->val);
+               if (1.0 == r->rval || 0.0 == r->rval) {
+                  For *f1 = static_cast<For *>(cur->next);
+                  if (!f1->step) {
+                     Stmt *t = f1;
+                     while (t->next != end
+                            && t->next->type == Stmt::Type::NEWLINE)
+                        t = t->next;
+                     if (t->next != end && t->next->type == Stmt::Type::NEXT) {
+                        Next *n1 = static_cast<Next *>(t->next);
+                        if (n1->var.empty() || n1->var == f1->var) {
+                           // remove NEXT
+                           t->next = n1->next;
+                           m_nodeMan.destroy(n1);
+
+                           m_nodeMan.destroy(r); // for i=X to n, remove X
+                           a1->val = f1->dest; // for i=X to n  -->  i = n
+                           XSleep *s1 = m_nodeMan.make<XSleep>(a1->val);
+                           s1->next = f1->next;
+                           a1->next = s1;
+                           m_nodeMan.destroy(f1);
+
+                           prev = s1;
+                           cur = s1->next;
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+         goto Ldefault;
+      }
+   }
+   return head;
 }
 
 // 汉字加上0x1f前缀
