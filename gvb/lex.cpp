@@ -21,6 +21,9 @@ const char *Token::toString(int tok) {
    case Token::INKEY: return "INKEY$";
    case -1: return "EOF";
    case 10: return "EOL";
+   case Token::GE: return ">=";
+   case Token::LE: return "<=";
+   case Token::NEQ: return "<>";
    case ID: return "id";
    case REAL: return "real";
    case INT: return "int";

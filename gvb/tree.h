@@ -6,6 +6,7 @@
 #include <vector>
 #include "value.h"
 #include "node.h"
+#include "func.h"
 
 namespace gvbsim {
 
@@ -72,18 +73,11 @@ public:
 };
 
 struct FuncCall : Expr { // 系统函数调用
-   enum class FnType {
-      ABS, ASC, ATN, CHR, COS, CVI, MKI, CVS, MKS, EXP, INT, LEFT, LEN, LOG,
-      MID, POS, RIGHT, RND, SGN, SIN, SQR, STR, TAN, VAL, PEEK, FEOF, LOF,
-      TAB, SPC, NEG, NOT,
-   };
-
-public:
    Expr *expr1, *expr2, *expr3;
-   FnType ftype;
+   Func::Type ftype;
 
 public:
-   FuncCall(FnType ftype, Value::Type vt, Expr *expr1, Expr *expr2 = nullptr,
+   FuncCall(Func::Type ftype, Value::Type vt, Expr *expr1, Expr *expr2 = nullptr,
             Expr *expr3 = nullptr)
          : Expr(Type::FUNCCALL, vt),
            expr1(expr1), expr2(expr2), expr3(expr3), ftype(ftype) { }
@@ -131,12 +125,12 @@ struct Inkey : Expr { // 按键
 
 struct If : Stmt { // if
    Expr *cond;
-   Stmt *stm, *stmElse;
+   Stmt *stmThen, *stmElse;
 
 public:
    If(Expr *cond, Stmt *stm, Stmt *stmElse)
          : Stmt(Type::IF),
-           cond(cond), stm(stm), stmElse(stmElse) { }
+           cond(cond), stmThen(stm), stmElse(stmElse) { }
 };
 
 struct Call : Stmt { // call

@@ -16,9 +16,6 @@ void test(const char *fn, ostream &out) {
    do {
       tok = l.getToken();
       switch (tok) {
-      case Token::GE: out << ">="; break;
-      case Token::LE: out << "<="; break;
-      case Token::NEQ: out << "<>"; break;
       case Token::ID: out << "id:[" << l.sval << "]"; break;
       case Token::STRING: out << "str:\"" << l.sval << "\""; break;
       case Token::INT: out << "int:" << l.ival; break;
