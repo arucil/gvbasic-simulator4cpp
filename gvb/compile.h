@@ -53,10 +53,20 @@ private:
    void datastmt();
    Stmt *defstmt();
    Stmt *printstmt();
+   Stmt *forstmt();
+   Stmt *nextstmt();
+   Stmt *dimstmt();
+   Stmt *inputstmt();
+   Stmt *writestmt();
+   Stmt *readstmt();
+   Stmt *openstmt();
+   Stmt *onstmt();
+   Stmt *fieldstmt();
    void resolveRefs();
    Stmt *findLabel(Goto *);
    Stmt *findLabel(Restore *);
    Stmt *findLabel(On *);
+   int getFileNum();
 
    Expr *expr(Value::Type);
    Expr *expr();

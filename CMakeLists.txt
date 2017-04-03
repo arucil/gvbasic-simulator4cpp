@@ -20,6 +20,6 @@ set(SOURCE_FILES gvb/lex.h
         gvb/gvb.cpp
         gvb/value.cpp
         gvb/data_man.h
-        gvb/data_man.cpp gvb/func.h gvb/func.cpp)
+        gvb/data_man.cpp gvb/func.h gvb/func.cpp gvb/test/test_parse.cpp gvb/test/debug.h gvb/test/debug.cpp)
 
 add_executable(GVBASIC ${SOURCE_FILES})

@@ -12,7 +12,7 @@ namespace gvbsim {
 
 struct Stmt : Node { // 语句
    enum class Type {
-      NONE, CLS, DIM, ASSIGN, SWAP, IF, ON, FOR, NEXT, WHILE, WEND, DEF,
+      NONE, CLS, DIM, ASSIGN, SWAP, IF, ON, FOR, NEXT, WHILE, WEND,
       GOSUB, RETURN, READ, RESTORE, INPUT, FINPUT, PRINT, LOCATE, INKEY,
       GRAPH, TEXT, DRAW, LINE, BOX, CIRCLE, ELLIPSE, OPEN, CLOSE, PUT,
       GET, LSET, RSET, POP, CLEAR, WRITE, POKE, CALL, END, FIELD, GOTO,
@@ -354,48 +354,48 @@ public:
 };
 
 struct Draw : Stmt {
-   Expr *x, *y, *type; // type可能为null
+   Expr *x, *y, *ctype; // type可能为null
 
 public:
    Draw(Expr *x, Expr *y, Expr *t)
          : Stmt(Type::DRAW),
-           x(x), y(y), type(t) { }
+           x(x), y(y), ctype(t) { }
 };
 
 struct Line : Stmt {
-   Expr *x1, *y1, *x2, *y2, *type;
+   Expr *x1, *y1, *x2, *y2, *ctype;
 
 public:
    Line(Expr *x1, Expr *y1, Expr *x2, Expr *y2, Expr *t)
          : Stmt(Type::LINE),
-           x1(x1), y1(y1), x2(x2), y2(y2), type(t) { }
+           x1(x1), y1(y1), x2(x2), y2(y2), ctype(t) { }
 };
 
 struct Box : Stmt {
-   Expr *x1, *y1, *x2, *y2, *fill, *type; // fill, type可能为null
+   Expr *x1, *y1, *x2, *y2, *fill, *ctype; // fill, type可能为null
 
 public:
    Box(Expr *x1, Expr *y1, Expr *x2, Expr *y2, Expr *f, Expr *t)
          : Stmt(Type::BOX),
-           x1(x1), y1(y1), x2(x2), y2(y2), fill(f), type(t) { }
+           x1(x1), y1(y1), x2(x2), y2(y2), fill(f), ctype(t) { }
 };
 
 struct Circle : Stmt {
-   Expr *x, *y, *radius, *fill, *type;
+   Expr *x, *y, *radius, *fill, *ctype;
 
 public:
    Circle(Expr *x, Expr *y, Expr *r, Expr *f, Expr *t)
          : Stmt(Type::CIRCLE),
-           x(x), y(y), radius(r), fill(f), type(t) { }
+           x(x), y(y), radius(r), fill(f), ctype(t) { }
 };
 
 struct Ellipse : Stmt {
-   Expr *x, *y, *rx, *ry, *fill, *type;
+   Expr *x, *y, *rx, *ry, *fill, *ctype;
 
 public:
    Ellipse(Expr *x, Expr *y, Expr *rx, Expr *fy, Expr *f, Expr *t)
          : Stmt(Type::ELLIPSE),
-           x(x), y(y), rx(rx), ry(ry), fill(f), type(t) { }
+           x(x), y(y), rx(rx), ry(ry), fill(f), ctype(t) { }
 };
 
 struct GetPut : Stmt { // put / get
@@ -411,8 +411,7 @@ public:
 struct Field : Stmt {
    int fnum;
    int total;
-   std::vector<int> sizes;
-   std::vector<std::string> ids;
+   std::vector<std::pair<int, std::string>> fields;
 
 public:
    Field(int fnum)

@@ -51,10 +51,9 @@ Stmt *Compiler::compile() {
 
    Stmt *prev;
    NewLine *head = nullptr;
-   NewLine *stmts;
 
    while (m_tok != -1) {
-      stmts = aLine(); //不可能为null
+      NewLine *stmts = aLine(); //不可能为null
       if (m_tok != 10 && m_tok != -1)
          cerror("Token error: [%m_c], expecting EOL / EOF", m_tok);
       peek();
@@ -128,7 +127,7 @@ inline NewLine *Compiler::aLine() {
       cerror("Label duplicate");
    m_dataMan.addLabel(m_label);
 
-   NewLine *s = m_nodeMan.make<NewLine>(m_line, m_label);
+   NewLine *s = m_nodeMan.make<NewLine>(m_label, m_line);
    s->next = stmts();
    return m_labels[m_label] = s; //记录一行的第一条语句
 }
@@ -180,42 +179,55 @@ Stmt *Compiler::stmt(bool inIf) { // 可能为null
       case Token::END:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::END);
+
       case Token::CLS:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::CLS);
+
       case Token::GRAPH:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::GRAPH);
+
       case Token::TEXT:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::TEXT);
+
       case Token::RETURN:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::RETURN);
+
       case Token::POP:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::POP);
+
       case Token::CLEAR:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::CLEAR);
+
       case Token::INVERSE:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::INVERSE);
+
       case Token::CONT:
          peek();
          return nullptr;
+
       case Token::BEEP:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::BEEP);
+
       case Token::PLAY:
          peek();
          return m_nodeMan.make<Play>(expr(Value::Type::STRING));
+
       case ':':
          peek();
          continue;
+
       case Token::INKEY:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::INKEY);
+
       case Token::LET:
          peek();
       case Token::ID: { // 赋值
@@ -224,28 +236,227 @@ Stmt *Compiler::stmt(bool inIf) { // 可能为null
          Expr *e1 = expr(getRValType(id1->vtype));
          return m_nodeMan.make<Assign>(id1, e1);
       }
+
       case Token::CALL: {
          peek();
          Expr *e1 = expr(Value::Type::REAL);
          return m_nodeMan.make<Call>(e1);
       }
+
       case Token::GOTO:
       case Token::GOSUB: {
-         int t = m_tok;
+         bool isSub = Token::GOSUB == m_tok;
          peek();
          int i1 = m_l.ival;
          match(Token::INT);
-         return findLabel(m_nodeMan.make<Goto>(i1, Token::GOSUB == t));
+         return findLabel(m_nodeMan.make<Goto>(i1, isSub));
       }
+
       case Token::IF:
          return ifstmt();
+
       case Token::DATA:
          datastmt();
          return nullptr;
+
       case Token::DEF:
          return defstmt();
+
       case Token::PRINT:
          return printstmt();
+
+      case Token::FOR:
+         return forstmt();
+
+      case Token::NEXT:
+         return nextstmt();
+
+      case Token::DIM:
+         return dimstmt();
+
+      case Token::WHILE:
+         peek();
+         return m_nodeMan.make<While>(expr(Value::Type::REAL));
+
+      case Token::WEND:
+         peek();
+         return m_nodeMan.make<Stmt>(Stmt::Type::WEND);
+
+      case Token::INPUT:
+         return inputstmt();
+
+      case Token::WRITE:
+         return writestmt();
+
+      case Token::READ:
+         return readstmt();
+
+      case Token::CLOSE:
+         peek();
+         return m_nodeMan.make<Close>(getFileNum());
+
+      case Token::OPEN:
+         return openstmt();
+
+      case Token::LOCATE: {
+         peek();
+         Expr *e1 = ',' == m_tok ? nullptr : expr(Value::Type::REAL);
+         match(',');
+         return m_nodeMan.make<Locate>(e1, expr(Value::Type::REAL));
+      }
+
+      case Token::POKE: {
+         peek();
+         Expr *e1 = expr(Value::Type::REAL);
+         match(',');
+         return m_nodeMan.make<Poke>(e1, expr(Value::Type::REAL));
+      }
+
+      case Token::RESTORE: {
+         peek();
+         int label;
+         if (Token::INT == m_tok) {
+            label = m_l.ival;
+            peek();
+         } else
+            label = Restore::NO_LABEL;
+         return findLabel(m_nodeMan.make<Restore>(label));
+      }
+
+      case Token::ON:
+         return onstmt();
+
+      case Token::DRAW: {
+         peek();
+         Expr *e1 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e2 = expr(Value::Type::REAL);
+         Expr *e3 = nullptr;
+         if (m_tok == ',') {
+            peek();
+            e3 = expr(Value::Type::REAL);
+         }
+         return m_nodeMan.make<Draw>(e1, e2, e3);
+      }
+
+      case Token::LINE: {
+         peek();
+         Expr *e1 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e2 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e3 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e4 = expr(Value::Type::REAL);
+         Expr *e5 = nullptr;
+         if (m_tok == ',') {
+            peek();
+            e5 = expr(Value::Type::REAL);
+         }
+         return m_nodeMan.make<Line>(e1, e2, e3, e4, e5);
+      }
+
+      case Token::BOX: {
+         peek();
+         Expr *e1 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e2 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e3 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e4 = expr(Value::Type::REAL);
+         Expr *e5 = nullptr, *e6 = nullptr;
+         if (m_tok == ',') {
+            peek();
+            e5 = expr(Value::Type::REAL);
+            if (m_tok == ',') {
+               peek();
+               e6 = expr(Value::Type::REAL);
+            }
+         }
+         return m_nodeMan.make<Box>(e1, e2, e3, e4, e5, e6);
+      }
+
+      case Token::CIRCLE: {
+         peek();
+         Expr *e1 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e2 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e3 = expr(Value::Type::REAL);
+         Expr *e4 = nullptr, *e5 = nullptr;
+         if (m_tok == ',') {
+            peek();
+            e4 = expr(Value::Type::REAL);
+            if (m_tok == ',') {
+               peek();
+               e5 = expr(Value::Type::REAL);
+            }
+         }
+         return m_nodeMan.make<Circle>(e1, e2, e3, e4, e5);
+      }
+
+      case Token::ELLIPSE: {
+         peek();
+         Expr *e1 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e2 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e3 = expr(Value::Type::REAL);
+         match(',');
+         Expr *e4 = expr(Value::Type::REAL);
+         Expr *e5 = nullptr, *e6 = nullptr;
+         if (m_tok == ',') {
+            peek();
+            e5 = expr(Value::Type::REAL);
+            if (m_tok == ',') {
+               peek();
+               e6 = expr(Value::Type::REAL);
+            }
+         }
+         return m_nodeMan.make<Ellipse>(e1, e2, e3, e4, e5, e6);
+      }
+
+      case Token::LSET:
+      case Token::RSET: {
+         bool isL = m_tok == Token::LSET;
+         peek();
+         Id *id1 = getId();
+         if (id1->vtype != Value::Type::STRING) {
+            cerror("Need string Id in LSET: [%s]", id1->id);
+         }
+         match('=');
+         return m_nodeMan.make<LRSet>(id1, expr(Value::Type::STRING), isL);
+      }
+      case Token::GET:
+      case Token::PUT: {
+         bool isGet = Token::GET == m_tok;
+         peek();
+         int fnum = getFileNum();
+         match(',');
+         return m_nodeMan.make<GetPut>(fnum, expr(Value::Type::REAL), isGet);
+      }
+
+      case Token::FIELD:
+         return fieldstmt();
+
+      case Token::INT:
+         if (inIf) {
+            int label = m_l.ival;
+            peek();
+            return findLabel(m_nodeMan.make<Goto>(label, false));
+         }
+         cerror("Token error: [%c], statement expected", m_tok);
+
+      case Token::SLEEP: {
+         peek();
+         int ticks = m_l.ival;
+         match(Token::INT);
+         return m_nodeMan.make<XSleep>(ticks);
+      }
+
+      default: // eol, eof, else ...
+         return nullptr;
       }
    }
 }
@@ -376,9 +587,253 @@ inline Stmt *Compiler::printstmt() {
          peek();
    }
    if (p1->exprs.empty()) {
-      p1->exprs.push_back(make_pair<Expr *>(nullptr, Print::Delimiter::NO));
+      p1->exprs.push_back(make_pair<Expr *>(nullptr, Print::Delimiter::CR));
    }
    return p1;
+}
+
+inline Stmt *Compiler::forstmt() {
+   peek();
+   string var = m_l.sval;
+   match(Token::ID);
+   Value::Type vt;
+   if ((vt = getIdType(var)) == Value::Type::STRING) {
+      cerror("Incompatible Id type in FOR: [%s]", var);
+   }
+   match('=');
+   Stmt *s1 = m_nodeMan.make<Assign>(m_nodeMan.make<Id>(var, vt),
+                                     expr(Value::Type::REAL));
+   match(Token::TO);
+   Expr *dest = expr(Value::Type::REAL);
+   Expr *step = nullptr;
+   if (m_tok == Token::STEP) {
+      peek();
+      step = expr(Value::Type::REAL);
+   }
+   s1->next = m_nodeMan.make<For>(var, dest, step);
+   return s1;
+}
+
+inline Stmt *Compiler::nextstmt() {
+   peek();
+   if (m_tok != Token::ID) {
+      return m_nodeMan.make<Next>("");
+   }
+   Stmt *head = nullptr, *cur;
+   while (true) {
+      string id = m_l.sval;
+      match(Token::ID);
+      if (getIdType(id) == Value::Type::STRING) {
+         cerror("Incompatible Id type in NEXT: [%s]", id);
+      }
+      Stmt *next = m_nodeMan.make<Next>(id);
+      if (!head) {
+         head = cur = next;
+      } else {
+         cur->next = next;
+         cur = next;
+      }
+      if (m_tok != ',')
+         break;
+      peek();
+   }
+   return head;
+}
+
+inline Stmt *Compiler::dimstmt() {
+   peek();
+   Stmt *head = nullptr, *cur;
+   while (true) {
+      Stmt *next = m_nodeMan.make<Dim>(getId());
+      if (!head) {
+         cur = head = next;
+      } else {
+         cur->next = next;
+         cur = next;
+      }
+      if (m_tok != ',')
+         break;
+      peek();
+   }
+   return head;
+}
+
+inline Stmt *Compiler::inputstmt() {
+   peek();
+   if (m_tok == '#' || m_tok == Token::INT) { //file input
+      int i1 = getFileNum();
+      match(',');
+      FInput *f1 = m_nodeMan.make<FInput>(i1);
+      while (true) {
+         f1->ids.push_back(getId());
+         if (m_tok != ',')
+            break;
+         peek();
+      }
+      return f1;
+   } else { //key input
+      string prompt;
+
+      if (m_tok == Token::STRING) {
+         prompt = m_l.sval;
+         peek();
+         match(';');
+      }
+      Input *i = m_nodeMan.make<Input>(prompt);
+      while (true) {
+         i->ids.push_back(getId());
+         if (m_tok != ',')
+            break;
+         peek();
+      }
+      return i;
+   }
+}
+
+inline Stmt *Compiler::writestmt() {
+   peek();
+   int i1 = getFileNum();
+   match(',');
+   Write *w = m_nodeMan.make<Write>(i1);
+   while (true) {
+      w->exprs.push_back(expr());
+      if (m_tok != ',')
+         break;
+      peek();
+   }
+   return w;
+}
+
+inline Stmt *Compiler::readstmt() {
+   peek();
+   Read *r = m_nodeMan.make<Read>();
+   while (true) {
+      r->ids.push_back(getId());
+      if (m_tok != ',')
+         break;
+      peek();
+   }
+   return r;
+}
+
+inline Stmt *Compiler::openstmt() {
+   peek();
+   Expr *fn = expr(Value::Type::STRING);
+   match(Token::FOR);
+
+   Open::Mode mode;
+   switch (m_tok) {
+   case Token::INPUT:
+      mode = Open::Mode::INPUT;
+      peek();
+      break;
+   case Token::ID:
+      if ("output" == m_l.sval) {
+         mode = Open::Mode::OUTPUT;
+         peek();
+      } else if ("random" == m_l.sval) {
+         mode = Open::Mode::RANDOM;
+         peek();
+      } else if ("outputas" == m_l.sval) {
+         mode = Open::Mode::OUTPUT;
+         m_tok = Token::AS;
+      } else if ("randomas" == m_l.sval) {
+         mode = Open::Mode::RANDOM;
+         m_tok = Token::AS;
+      } else if ("inputas" == m_l.sval) {
+         mode = Open::Mode::INPUT;
+         m_tok = Token::AS;
+      } else if ("append" == m_l.sval) {
+         mode = Open::Mode::APPEND;
+         peek();
+      } else if ("appendas" == m_l.sval) {
+         mode = Open::Mode::APPEND;
+         m_tok = Token::AS;
+      } else {
+         cerror("File mode error: [%s]", m_l.sval);
+      }
+      break;
+   default:
+      cerror("Not file mode: [%c]", m_tok);
+   }
+   match(Token::AS);
+
+   int i2 = getFileNum();
+   int len;
+   if (mode == Open::Mode::RANDOM && m_tok == Token::ID && m_l.sval == "len") {
+      peek();
+      match('=');
+      len = m_l.ival;
+      match(Token::INT);
+   } else
+      len = Open::NOLEN;
+   return m_nodeMan.make<Open>(i2, fn, mode, len);
+}
+
+inline Stmt *Compiler::onstmt() {
+   peek();
+   Expr *e1 = expr(Value::Type::REAL);
+   bool isSub;
+   if (m_tok == Token::GOTO) {
+      isSub = false;
+   } else if (m_tok == Token::GOSUB) {
+      isSub = true;
+   } else {
+      cerror("Token error: [%c], expecting GOTO / GOSUB", m_tok);
+   }
+   peek();
+
+   On *o = m_nodeMan.make<On>(e1, isSub);
+   On::Addr addr;
+
+   while (true) {
+      addr.label = m_l.ival;
+      match(Token::INT);
+      o->addrs.push_back(addr);
+      if (m_tok != ',')
+         break;
+      peek();
+   }
+
+   return findLabel(o);
+}
+
+inline Stmt *Compiler::fieldstmt() {
+   peek();
+   int fnum = getFileNum();
+   match(',');
+
+   Field *f1 = m_nodeMan.make<Field>(fnum);
+   int total = 0;
+   while (true) {
+      int size = m_l.ival;
+      match(Token::INT);
+      match(Token::AS);
+      string id = m_l.sval;
+      match(Token::ID);
+      if (getIdType(id) != Value::Type::STRING) {
+         cerror("Need string Id in FIELD: [%s]", id);
+      }
+      f1->fields.push_back(make_pair(size, id));
+      total += size;
+      if (m_tok != ',')
+         break;
+      peek();
+   }
+
+   f1->total = total;
+   return f1;
+}
+
+inline int Compiler::getFileNum() {
+   if (m_tok == '#')
+      peek();
+   int i = m_l.ival - 1;
+   match(Token::INT);
+   if (i > 2 || i < 0) {
+      cerror("File number error: [%i]", i + 1);
+   }
+   return i;
 }
 
 inline Stmt *Compiler::findLabel(Goto *s) {
