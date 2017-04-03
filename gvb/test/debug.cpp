@@ -130,7 +130,8 @@ void print(Stmt *s, int lv, ostream &out) {
       Print *p = (Print *) s;
       out << "PRINT ";
       for (auto i : p->exprs) {
-         print(i.first, out);
+         if (i.first)
+            print(i.first, out);
          if (Print::Delimiter::CR == i.second)
             out << ", ";
          else
@@ -209,7 +210,7 @@ void print(Stmt *s, int lv, ostream &out) {
       Input *f = (Input *) s;
       out << "INPUT ";
       if (f->prompt.size()) {
-         out << '"' << f->prompt << "\", ";
+         out << '"' << f->prompt << "\"; ";
       }
       for (int i = 0; i < f->ids.size(); ++i) {
          print(f->ids[i], out);
@@ -240,6 +241,7 @@ void print(Stmt *s, int lv, ostream &out) {
    }
    case Stmt::Type::CLOSE:
       out << "CLOSE #" << ((Close *) s)->fnum + 1;
+      break;
    case Stmt::Type::OPEN: {
       Open *o = (Open *) s;
       out << "OPEN ";
@@ -289,7 +291,7 @@ void print(Stmt *s, int lv, ostream &out) {
       On *o = (On *) s;
       out << "ON ";
       print(o->cond, out);
-      out << (o->isSub ? " GOSUB" : " GOTO");
+      out << (o->isSub ? " GOSUB " : " GOTO ");
       for (int i = 0; i < o->addrs.size(); ++i) {
          out << o->addrs[i].stm->label;
          if (i < o->addrs.size() - 1)
@@ -389,7 +391,8 @@ void print(Stmt *s, int lv, ostream &out) {
       if (s->type == Stmt::Type::LSET)
          out << "LSET ";
       else out << "RSET ";
-      out << l->id << " = ";
+      print(l->id, out);
+      out << " = ";
       print(l->str, out);
       break;
    }
@@ -414,7 +417,8 @@ void print(Stmt *s, int lv, ostream &out) {
       break;
    }
    case Stmt::Type::SLEEP:
-      out << "SLEEP " << ((XSleep *) s)->ticks;
+      out << "SLEEP ";
+      print(((XSleep *) s)->ticks, out);
       break;
    case Stmt::Type::PLAY:
       out << "PLAY ";

@@ -4,7 +4,7 @@
 using namespace gvbsim;
 using namespace std;
 
-uint64_t Real::fromDouble(const double d) {
+uint64_t RealHelper::fromDouble(const double d) {
    uint64_t l = reinterpret_cast<const uint64_t &>(d);
    uint32_t sign = static_cast<uint32_t>(l >> 63);
    int32_t d_exp = l >> 52 & 0x7ff;
@@ -23,7 +23,7 @@ uint64_t Real::fromDouble(const double d) {
           | (l >> 52 - 31) & ((1u << 31) - 1);
 }
 
-double Real::toDouble(const uint64_t l) {
+double RealHelper::toDouble(const uint64_t l) {
    uint64_t d = (l & 0x8000'0000) << 32;
    int32_t exp = l >> 32 & 255;
 
@@ -36,7 +36,7 @@ double Real::toDouble(const uint64_t l) {
    return reinterpret_cast<double &>(d);
 }
 
-Real::Result Real::validate(double &d) {
+RealHelper::Result RealHelper::validate(double &d) {
    uint64_t l = reinterpret_cast<uint64_t &>(d);
    int32_t exp = l >> 52 & 0x7ff;
 

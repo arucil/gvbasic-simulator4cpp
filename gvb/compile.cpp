@@ -3,6 +3,7 @@
 #include "gvb.h"
 #include "data_man.h"
 #include "tree.h"
+#include "real.h"
 
 using namespace gvbsim;
 using namespace std;
@@ -38,7 +39,7 @@ void Compiler::peek() {
 
 void Compiler::match(int t) {
    if (t != m_tok)
-      cerror("Token error: [%m_c], expecting [%m_c]", m_tok, t);
+      cerror("Token error: [%c], expecting [%c]", m_tok, t);
    peek();
 }
 
@@ -46,6 +47,7 @@ Stmt *Compiler::compile() {
    m_nodeMan.clear();
    m_dataMan.clear();
    m_line = 1;
+   m_label = -1;
 
    peek();
 
@@ -55,7 +57,7 @@ Stmt *Compiler::compile() {
    while (m_tok != -1) {
       NewLine *stmts = aLine(); //不可能为null
       if (m_tok != 10 && m_tok != -1)
-         cerror("Token error: [%m_c], expecting EOL / EOF", m_tok);
+         cerror("Token error: [%c], expecting EOL / EOF", m_tok);
       peek();
       if (nullptr == head) {
          prev = head = stmts;
@@ -121,8 +123,11 @@ inline void Compiler::resolveRefs() { //解决label引用
 }
 
 inline NewLine *Compiler::aLine() {
-   m_label = m_l.ival;
+   int t = m_l.ival;
    match(Token::INT);
+   if (t <= m_label)
+      cerror("Invalid label");
+   m_label = t;
    if (m_labels.count(m_label))
       cerror("Label duplicate");
    m_dataMan.addLabel(m_label);
@@ -137,14 +142,14 @@ inline Stmt *Compiler::stmts() { //可能为null
 
    while (true) {
       Stmt *stm = stmt(false);//可能为null
-      if (!stm)
-         break;
-      if (!head) {
-         head = cur = stm;
-      } else {
-         linkStmt(cur, stm);
+      if (stm) {
+         if (!head) {
+            head = cur = stm;
+         } else {
+            linkStmt(cur, stm);
+         }
+         cur = getStmtTail(cur);
       }
-      cur = getStmtTail(cur);
       if (m_tok == 10 || m_tok == -1)
          break;
       match(':');
@@ -176,6 +181,13 @@ void Compiler::linkStmt(Stmt *s, Stmt *next) {
 Stmt *Compiler::stmt(bool inIf) { // 可能为null
    while (true) {
       switch (m_tok) {
+      case Token::REM: {
+         int c;
+         while ((c = m_l.getc()) != 10 && c != -1)
+            ;
+         m_tok = c;
+         return nullptr;
+      }
       case Token::END:
          peek();
          return m_nodeMan.make<Stmt>(Stmt::Type::END);
@@ -450,9 +462,7 @@ Stmt *Compiler::stmt(bool inIf) { // 可能为null
 
       case Token::SLEEP: {
          peek();
-         int ticks = m_l.ival;
-         match(Token::INT);
-         return m_nodeMan.make<XSleep>(ticks);
+         return m_nodeMan.make<XSleep>(expr(Value::Type::REAL));
       }
 
       default: // eol, eof, else ...
@@ -491,14 +501,14 @@ inline Stmt *Compiler::ifclause() {
 
    while (true) {
       Stmt *stm = stmt(true);//可能为null
-      if (!stm)
-         break;
-      if (!head) {
-         head = cur = stm;
-      } else {
-         linkStmt(cur, stm);
+      if (stm) {
+         if (!head) {
+            head = cur = stm;
+         } else {
+            linkStmt(cur, stm);
+         }
+         cur = getStmtTail(cur);
       }
-      cur = getStmtTail(cur);
       if (m_tok == 10 || m_tok == Token::ELSE || m_tok == -1)
          break;
       match(':');
@@ -520,7 +530,7 @@ inline void Compiler::datastmt() {
             s += static_cast<char>(i1);
          }
          if (i1 != '"') {
-            m_tok = i1 == 13 ? 10 : i1;
+            m_tok = i1 == 13 ? m_l.getc() /* assuming 10 */ : i1;
          } else {
             i1 = m_l.getc();
          }
@@ -532,7 +542,7 @@ inline void Compiler::datastmt() {
       }
       m_dataMan.add(addCNPrefix(rtrim(s)));
       if (i1 != ',') {
-         m_tok = i1 == 13 ? 10 : i1;
+         m_tok = i1 == 13 ? m_l.getc() /* assuming 10 */ : i1;
          break;
       }
    }
@@ -728,25 +738,25 @@ inline Stmt *Compiler::openstmt() {
       peek();
       break;
    case Token::ID:
-      if ("output" == m_l.sval) {
+      if ("OUTPUT" == m_l.sval) {
          mode = Open::Mode::OUTPUT;
          peek();
-      } else if ("random" == m_l.sval) {
+      } else if ("RANDOM" == m_l.sval) {
          mode = Open::Mode::RANDOM;
          peek();
-      } else if ("outputas" == m_l.sval) {
+      } else if ("OUTPUTAS" == m_l.sval) {
          mode = Open::Mode::OUTPUT;
          m_tok = Token::AS;
-      } else if ("randomas" == m_l.sval) {
+      } else if ("RANDOMAS" == m_l.sval) {
          mode = Open::Mode::RANDOM;
          m_tok = Token::AS;
-      } else if ("inputas" == m_l.sval) {
+      } else if ("INPUTAS" == m_l.sval) {
          mode = Open::Mode::INPUT;
          m_tok = Token::AS;
-      } else if ("append" == m_l.sval) {
+      } else if ("APPEND" == m_l.sval) {
          mode = Open::Mode::APPEND;
          peek();
-      } else if ("appendas" == m_l.sval) {
+      } else if ("APPENDAS" == m_l.sval) {
          mode = Open::Mode::APPEND;
          m_tok = Token::AS;
       } else {
@@ -760,7 +770,7 @@ inline Stmt *Compiler::openstmt() {
 
    int i2 = getFileNum();
    int len;
-   if (mode == Open::Mode::RANDOM && m_tok == Token::ID && m_l.sval == "len") {
+   if (mode == Open::Mode::RANDOM && m_tok == Token::ID && m_l.sval == "LEN") {
       peek();
       match('=');
       len = m_l.ival;
@@ -919,6 +929,13 @@ Expr *Compiler::F() {
    case Token::REAL: {
       double r = m_l.rval;
       peek();
+
+      auto res = RealHelper::validate(r);
+      assert(res != RealHelper::Result::IS_NAN);
+      if (RealHelper::Result::IS_INF == res) {
+         cerror("Number overflow");
+      }
+
       return m_nodeMan.make<Real>(r);
    }
    case Token::STRING: {

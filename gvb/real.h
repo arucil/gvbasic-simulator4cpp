@@ -16,7 +16,7 @@ namespace gvbsim {
  * highest  [ exp(8) sign(1)  mantissa(31) ]  lowest
  * bias=128, exponent ~ [-127, +127], -128 represents 0 (ignoring mantissa)
  */
-class Real {
+class RealHelper {
 public:
 	enum class Result {
 		IS_VALID,
@@ -25,7 +25,7 @@ public:
 	};
 
 public:
-	Real() = delete;
+	RealHelper() = delete;
 
 public:
    // double转换为MBF(只使用了uint64_t的最低5个字节)

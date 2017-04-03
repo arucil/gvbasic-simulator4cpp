@@ -393,7 +393,7 @@ struct Ellipse : Stmt {
    Expr *x, *y, *rx, *ry, *fill, *ctype;
 
 public:
-   Ellipse(Expr *x, Expr *y, Expr *rx, Expr *fy, Expr *f, Expr *t)
+   Ellipse(Expr *x, Expr *y, Expr *rx, Expr *ry, Expr *f, Expr *t)
          : Stmt(Type::ELLIPSE),
            x(x), y(y), rx(rx), ry(ry), fill(f), ctype(t) { }
 };
@@ -441,10 +441,10 @@ public:
 /*-----------------     extended  ------------------*/
 
 struct XSleep : Stmt {
-   int ticks;
+   Expr *ticks;
 
 public:
-   XSleep(int ticks)
+   XSleep(Expr *ticks)
          : Stmt(Type::SLEEP),
            ticks(ticks) { }
 };
