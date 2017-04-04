@@ -13,6 +13,9 @@ private:
 
 protected:
    Node() = default;
+
+public:
+   virtual ~Node() { }
 };
 
 }

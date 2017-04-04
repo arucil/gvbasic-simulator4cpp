@@ -1,13 +1,37 @@
 #include "gvb.h"
 #include <sstream>
 #include <cstdarg>
-#include "value.h"
+#include <cassert>
 #include "error.h"
 #include "lex.h"
+#include "compile.h"
 
 using namespace gvbsim;
 using namespace std;
 
+
+GVB::GVB(Device *dev) : m_device(dev), m_head(nullptr) {
+   assert(dev);
+}
+
+GVB::~GVB() {
+   clearStack();
+   clearEnv();
+}
+
+void GVB::build(std::FILE *fp) {
+   Compiler compiler(fp, m_nodeMan, m_dataMan);
+
+   m_head = compiler.compile();
+}
+
+/* %c token
+ * %s string
+ * %S const char *
+ * %t Value::Type
+ * %i int
+ * %f double
+ * */
 void GVB::error(int line, int label, const char *s, ...) {
    ostringstream sout;
    va_list a;

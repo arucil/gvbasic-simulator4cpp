@@ -22,6 +22,10 @@ public:
       return seed = seed + 13849 & MAX;
    }
 
+   std::uint32_t stationary() {
+      return seed;
+   }
+
 private:
    std::uint32_t seed;
 };

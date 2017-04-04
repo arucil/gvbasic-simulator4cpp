@@ -1,7 +1,6 @@
 #include "compile.h"
 #include <cassert>
 #include "gvb.h"
-#include "data_man.h"
 #include "tree.h"
 #include "real.h"
 
@@ -912,6 +911,8 @@ Expr *Compiler::E_(int prev_p) {
             cerror("Rvalue type error in binary: [%t], [%t] expected",
                    e1->vtype, Value::Type::REAL);
          }
+      default:
+         break;
       }
       e1 = m_nodeMan.make<Binary>(e1, e2, i,'+' == i ? e1->vtype
                                                      : Value::Type::REAL);
@@ -922,7 +923,7 @@ Expr *Compiler::E_(int prev_p) {
 Expr *Compiler::F() {
    switch (m_tok) {
    case Token::INT: {
-      double r = m_l.ival;
+      double r = m_l.ival; // 一定valid
       peek();
       return m_nodeMan.make<Real>(r);
    }
@@ -1043,7 +1044,7 @@ inline int Compiler::getp(int op) {
    }
 }
 
-inline Value::Type Compiler::getIdType(const string &id) {
+Value::Type Compiler::getIdType(const string &id) {
    switch (id.back()) {
    case '$': return Value::Type::STRING;
    case '%': return Value::Type::INT;
@@ -1056,8 +1057,17 @@ inline Value::Type Compiler::getIdRValType(const std::string &id) {
 }
 
 inline Value::Type Compiler::getRValType(Value::Type type) {
-   return static_cast<Value::Type>(static_cast<int>(type)
-         & static_cast<int>(Value::Type::RVAL_MASK));
+   return static_cast<Value::Type>(static_cast<int>(type) & Value::RVAL_MASK);
+}
+
+inline string &Compiler::toArrayId(std::string &id) {
+   char c = id.back();
+   if ('%' == c || '$' == c) {
+      id.back() = ']';
+      id.push_back(c);
+   } else
+      id.push_back(']');
+   return id;
 }
 
 Id *Compiler::getId() {
@@ -1077,20 +1087,21 @@ Id *Compiler::getId() {
          }
          match(',');
       }
-      return m_nodeMan.make<ArrayAccess>(id, v, vt);
+      // 数组名都会加上]后缀，如A -> A]、A$ -> A]$
+      // 同名的单个变量和数组变量可以共存，所以需要这样做
+      return m_nodeMan.make<ArrayAccess>(toArrayId(id), v, vt);
    } else {
       return m_nodeMan.make<Id>(id, vt);
    }
 }
 
 Stmt *Compiler::translate(Stmt *head, Stmt *end) {
-   Stmt *cur = head, *prev = nullptr;
+   Stmt *cur = head;
 
    while (cur != end) {
       switch (cur->type) {
       default:
 Ldefault:
-         prev = cur;
          cur = cur->next;
          break;
       case Stmt::Type::IF: {
@@ -1108,15 +1119,20 @@ Ldefault:
           * */
          if (cur->next != end && cur->next->type == Stmt::Type::FOR) {
             Assign *a1 = static_cast<Assign *>(cur);
+
             if (a1->val->type == Expr::Type::REAL) {
                Real *r = static_cast<Real *>(a1->val);
+
                if (1.0 == r->rval || 0.0 == r->rval) {
                   For *f1 = static_cast<For *>(cur->next);
+
                   if (!f1->step) {
                      Stmt *t = f1;
+
                      while (t->next != end
                             && t->next->type == Stmt::Type::NEWLINE)
                         t = t->next;
+
                      if (t->next != end && t->next->type == Stmt::Type::NEXT) {
                         Next *n1 = static_cast<Next *>(t->next);
                         if (n1->var.empty() || n1->var == f1->var) {
@@ -1131,7 +1147,6 @@ Ldefault:
                            a1->next = s1;
                            m_nodeMan.destroy(f1);
 
-                           prev = s1;
                            cur = s1->next;
                            break;
                         }
@@ -1173,6 +1188,6 @@ inline string &Compiler::rtrim(std::string &s) {
    int i = static_cast<int>(s.size());
    while (--i >= 0 && ' ' == s[i])
       ;
-   s.resize(i + 1);
+   s.resize(static_cast<string::size_type>(i + 1));
    return s;
 }

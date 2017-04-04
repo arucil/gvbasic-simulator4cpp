@@ -78,11 +78,14 @@ private:
    Id *getId();
 
    static int getp(int op);
-   static Value::Type getIdType(const std::string &);
    static Value::Type getIdRValType(const std::string &);
    static Value::Type getRValType(Value::Type);
    static std::string &addCNPrefix(std::string &);
    static std::string &rtrim(std::string &);
+   static std::string &toArrayId(std::string &);
+
+public:
+   static Value::Type getIdType(const std::string &);
 };
 
 }
