@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include "device.h"
 #include "compile.h"
 #include "tree.h"
@@ -299,7 +300,7 @@ inline void GVB::eval_binary(Binary *b1) {
          auto res = RealHelper::validate(m_stack.back().rval += m_top.rval);
          assert(res != RealHelper::Result::IS_NAN); // 加法会nan ?
          if (RealHelper::Result::IS_INF == res) {
-            rerror("Number overflow");
+            rerror("Number overflow in +");
          }
       } else
          m_stack.back().sval += m_top.sval;
@@ -309,7 +310,7 @@ inline void GVB::eval_binary(Binary *b1) {
       auto res = RealHelper::validate(m_stack.back().rval -= m_top.rval);
       assert(res != RealHelper::Result::IS_NAN);
       if (RealHelper::Result::IS_INF == res) {
-         rerror("Number overflow");
+         rerror("Number overflow in -");
       }
       break;
    }
@@ -318,7 +319,7 @@ inline void GVB::eval_binary(Binary *b1) {
       auto res = RealHelper::validate(m_stack.back().rval *= m_top.rval);
       assert(res != RealHelper::Result::IS_NAN);
       if (RealHelper::Result::IS_INF == res) {
-         rerror("Number overflow");
+         rerror("Number overflow in *");
       }
       break;
    }
@@ -331,7 +332,7 @@ inline void GVB::eval_binary(Binary *b1) {
       // 0 / 0  => nan
       // x / 0  => inf
       if (res != RealHelper::Result::IS_VALID) {
-         rerror("Number overflow");
+         rerror("Number overflow in /");
       }
       break;
    }
@@ -342,10 +343,10 @@ inline void GVB::eval_binary(Binary *b1) {
       int err = errno;
       auto res = RealHelper::validate(m_stack.back().rval = r);
       if (ERANGE == err || RealHelper::Result::IS_INF == res) {
-         rerror("Number overflow");
+         rerror("Number overflow in ^");
       }
       if (err || RealHelper::Result::IS_VALID != res) {
-         rerror("Illegal operand");
+         rerror("Illegal operand in ^");
       }
       break;
    }
@@ -434,6 +435,16 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
    }
 
+   case Func::Type::TAN: {
+      auto res = RealHelper::validate(m_stack.back().rval =
+                                            tan(m_stack.back().rval));
+      assert(res != RealHelper::Result::IS_NAN);
+      if (RealHelper::Result::IS_INF == res) {
+         rerror("Number overflow in TAN");
+      }
+      break;
+   }
+
    case Func::Type::CVI: // 2-byte => int
       if (m_stack.back().sval.size() < 2) {
          rerror("String too short in CVI: LEN(%s)=%i",
@@ -481,7 +492,7 @@ inline void GVB::eval_func(FuncCall *fc) {
                                             exp(m_stack.back().rval));
       assert(res != RealHelper::Result::IS_NAN);
       if (RealHelper::Result::IS_NAN == res) {
-         rerror("Number overflow");
+         rerror("Number overflow in EXP");
       }
       break;
    }
@@ -524,10 +535,10 @@ inline void GVB::eval_func(FuncCall *fc) {
       int err = errno;
       auto res = RealHelper::validate(r);
       if (ERANGE == err || RealHelper::Result::IS_INF == res) {
-         rerror("Number overflow");
+         rerror("Number overflow in LOG");
       }
       if (err || RealHelper::Result::IS_VALID != res) {
-         rerror("Illegal operand");
+         rerror("Illegal argument in LOG");
       }
       break;
    }
@@ -562,14 +573,14 @@ inline void GVB::eval_func(FuncCall *fc) {
       m_stack.back().rval = m_device->getX() + 1;
       break;
 
-   case Func::Type::RND:
-      if (0. == m_stack.back().rval)
-         m_stack.back().rval = m_rand.stationary();
-      else if (m_stack.back().rval > 0.)
-         m_stack.back().rval = m_rand.random();
-      else
-         m_stack.back().rval = m_rand.sequence();
+   case Func::Type::RND: {
+      m_stack.back().rval = (0. == m_stack.back().rval ? m_rand.stationary()
+            : m_stack.back().rval > 0. ? m_rand.random() : m_rand.sequence())
+            / static_cast<double>(Random::MAX + 1);
+      auto res = RealHelper::validate(m_stack.back().rval);
+      assert(res == RealHelper::Result::IS_VALID);
       break;
+   }
 
    case Func::Type::SGN: {
       auto &r = m_stack.back().rval;
@@ -577,6 +588,26 @@ inline void GVB::eval_func(FuncCall *fc) {
          r = -1.0;
       else if (r > 0.0)
          r = 1.0;
+      break;
+   }
+
+   case Func::Type::SQR: {
+      double &r = m_stack.back().rval;
+      errno = 0;
+      r = sqrt(r);
+      if (errno) {
+         rerror("Illegal argument in SQR");
+      }
+      auto res = RealHelper::validate(r);
+      assert(res == RealHelper::Result::IS_VALID);
+      break;
+   }
+
+   case Func::Type::STR: {
+      char buf[100];
+      sprintf(buf, "%.9G", m_stack.back().rval);
+      m_stack.back().vtype = Value::Type::STRING;
+      m_stack.back().sval = buf;
       break;
    }
    }
