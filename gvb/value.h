@@ -7,6 +7,7 @@
 
 namespace gvbsim {
 
+
 struct Value {
    enum class Type {
       REAL = 1, STRING,
@@ -14,40 +15,15 @@ struct Value {
       INT = 0x21
    };
 
-   enum class VarType {
-      ID, ARRAY
-   };
-
 public:
    enum { RVAL_MASK = 0x1f };
 
    static const char *toString(Type type);
-
-public:
-   VarType type;
-   Type vtype;
-
-protected:
-   Value(VarType t) : type(t) { }
-   Value(VarType t, Type vt) : type(t), vtype(vt) { }
-
-public:
-   template <typename T, typename... Ts>
-   static T *make(Ts...);
-
-   static void destroy(Value *);
 };
 
-template <typename T, typename... Ts>
-T *Value::make(Ts... args) {
-   static_assert(std::is_base_of<Value, T>::value, "");
-
-   return new T(args...);
-}
-
-
 // 单个值
-struct Single : Value {
+struct Single {
+   Value::Type vtype;
    union {
       int ival;
       double rval;
@@ -55,29 +31,28 @@ struct Single : Value {
    std::string sval;
 
 public:
-   Single() : Value(VarType::ID) { }
-   Single(int ival) : Value(VarType::ID, Type::INT), ival(ival) { }
-   Single(double rval) : Value(VarType::ID, Type::REAL), rval(rval) { }
-   Single(const std::string &s) : Value(VarType::ID, Type::STRING), sval(s) { }
+   Single() { }
+   Single(int ival) : vtype(Value::Type::INT), ival(ival) { }
+   Single(double rval) : vtype(Value::Type::REAL), rval(rval) { }
+   Single(const std::string &s) : vtype(Value::Type::STRING), sval(s) { }
+   Single(const char *s) : vtype(Value::Type::STRING), sval(s) { }
 };
 
 // 数组
-struct Array : Value {
-   union Internal {
+struct Array {
+   Value::Type vtype;
+   union Number {
       int ival;
       double rval;
 
-      Internal(int i) : ival(i) { }
-      Internal(double r) : rval(r) { }
+      Number(int i) : ival(i) { }
+      Number(double r) : rval(r) { }
    };
 
 public:
    std::vector<unsigned> bounds;
-   std::vector<Internal> nums;
+   std::vector<Number> nums;
    std::vector<std::string> strs;
-
-public:
-   Array() : Value(VarType::ARRAY) { }
 };
 
 }

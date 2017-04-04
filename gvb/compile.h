@@ -82,7 +82,6 @@ private:
    static Value::Type getRValType(Value::Type);
    static std::string &addCNPrefix(std::string &);
    static std::string &rtrim(std::string &);
-   static std::string &toArrayId(std::string &);
 
 public:
    static Value::Type getIdType(const std::string &);

@@ -247,9 +247,9 @@ void print(Stmt *s, int lv, ostream &out) {
       out << "OPEN ";
       print(o->fname, out);
       out << " FOR ";
-      out << (Open::Mode::INPUT == o->mode ? "INPUT" :
-              Open::Mode::OUTPUT == o->mode ? "OUTPUT" :
-              Open::Mode::APPEND == o->mode ? "APPEND" : "RANDOM");
+      out << (File::Mode::INPUT == o->mode ? "INPUT" :
+              File::Mode::OUTPUT == o->mode ? "OUTPUT" :
+              File::Mode::APPEND == o->mode ? "APPEND" : "RANDOM");
       out << " AS #" << o->fnum + 1;
       if (o->len != Open::NOLEN)
          out << " LEN=" << o->len;

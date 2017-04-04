@@ -7,6 +7,7 @@
 #include "value.h"
 #include "node.h"
 #include "func.h"
+#include "file.h"
 
 namespace gvbsim {
 
@@ -273,19 +274,16 @@ public:
 };
 
 struct Open : Stmt { // open
-   enum class Mode {
-      INPUT, OUTPUT, RANDOM, APPEND
-   };
    enum { NOLEN = -1 };
 
 public:
    int fnum;
    Expr *fname;
-   Mode mode;
+   File::Mode mode;
    int len; // random模式用
 
 public:
-   Open(int fnum, Expr *fname, Mode mode, int len)
+   Open(int fnum, Expr *fname, File::Mode mode, int len)
          : Stmt(Type::OPEN),
            fnum(fnum), fname(fname), mode(mode), len(len) { }
 };

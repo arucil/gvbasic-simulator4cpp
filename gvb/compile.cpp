@@ -730,33 +730,33 @@ inline Stmt *Compiler::openstmt() {
    Expr *fn = expr(Value::Type::STRING);
    match(Token::FOR);
 
-   Open::Mode mode;
+   File::Mode mode;
    switch (m_tok) {
    case Token::INPUT:
-      mode = Open::Mode::INPUT;
+      mode = File::Mode::INPUT;
       peek();
       break;
    case Token::ID:
       if ("OUTPUT" == m_l.sval) {
-         mode = Open::Mode::OUTPUT;
+         mode = File::Mode::OUTPUT;
          peek();
       } else if ("RANDOM" == m_l.sval) {
-         mode = Open::Mode::RANDOM;
+         mode = File::Mode::RANDOM;
          peek();
       } else if ("OUTPUTAS" == m_l.sval) {
-         mode = Open::Mode::OUTPUT;
+         mode = File::Mode::OUTPUT;
          m_tok = Token::AS;
       } else if ("RANDOMAS" == m_l.sval) {
-         mode = Open::Mode::RANDOM;
+         mode = File::Mode::RANDOM;
          m_tok = Token::AS;
       } else if ("INPUTAS" == m_l.sval) {
-         mode = Open::Mode::INPUT;
+         mode = File::Mode::INPUT;
          m_tok = Token::AS;
       } else if ("APPEND" == m_l.sval) {
-         mode = Open::Mode::APPEND;
+         mode = File::Mode::APPEND;
          peek();
       } else if ("APPENDAS" == m_l.sval) {
-         mode = Open::Mode::APPEND;
+         mode = File::Mode::APPEND;
          m_tok = Token::AS;
       } else {
          cerror("File mode error: [%s]", m_l.sval);
@@ -769,7 +769,7 @@ inline Stmt *Compiler::openstmt() {
 
    int i2 = getFileNum();
    int len;
-   if (mode == Open::Mode::RANDOM && m_tok == Token::ID && m_l.sval == "LEN") {
+   if (mode == File::Mode::RANDOM && m_tok == Token::ID && m_l.sval == "LEN") {
       peek();
       match('=');
       len = m_l.ival;
@@ -1060,16 +1060,6 @@ inline Value::Type Compiler::getRValType(Value::Type type) {
    return static_cast<Value::Type>(static_cast<int>(type) & Value::RVAL_MASK);
 }
 
-inline string &Compiler::toArrayId(std::string &id) {
-   char c = id.back();
-   if ('%' == c || '$' == c) {
-      id.back() = ']';
-      id.push_back(c);
-   } else
-      id.push_back(']');
-   return id;
-}
-
 Id *Compiler::getId() {
     string id = m_l.sval;
 
@@ -1087,9 +1077,7 @@ Id *Compiler::getId() {
          }
          match(',');
       }
-      // 数组名都会加上]后缀，如A -> A]、A$ -> A]$
-      // 同名的单个变量和数组变量可以共存，所以需要这样做
-      return m_nodeMan.make<ArrayAccess>(toArrayId(id), v, vt);
+      return m_nodeMan.make<ArrayAccess>(id, v, vt);
    } else {
       return m_nodeMan.make<Id>(id, vt);
    }

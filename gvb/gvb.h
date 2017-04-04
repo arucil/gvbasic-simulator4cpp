@@ -8,12 +8,12 @@
 #include "data_man.h"
 #include "random.h"
 #include "value.h"
+#include "file.h"
 
 namespace gvbsim {
 
 class Device;
 class Stmt;
-class Value;
 class Dim;
 class Assign;
 class While;
@@ -55,10 +55,12 @@ private:
    std::vector<WhileLoop> m_whiles;
    std::vector<ForLoop> m_fors;
    std::unordered_map<std::string, DefFn *> m_funcs; // 用户定义函数
-   std::unordered_map<std::string, Value *> m_env;
+   std::unordered_map<std::string, Single> m_envVar;
+   std::unordered_map<std::string, Array> m_envArray;
    Random m_rand;
    NodeManager m_nodeMan;
    DataManager m_dataMan;
+   File m_files[3];
    int m_line, m_label;
 
 public:
@@ -73,6 +75,7 @@ public:
 private:
    void clearEnv();
    void clearStack();
+   void clearFiles();
 
    void traverse(Stmt *);
 

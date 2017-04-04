@@ -31,6 +31,7 @@ void GVB::build(std::FILE *fp) {
  * %t Value::Type
  * %i int
  * %f double
+ * %m file mode
  * */
 void GVB::error(int line, int label, const char *s, ...) {
    ostringstream sout;
@@ -65,6 +66,9 @@ void GVB::error(int line, int label, const char *s, ...) {
             break;
          case 't': //value type
             sout << Value::toString(va_arg(a, Value::Type));
+            break;
+         case 'm':
+            sout << File::toString(va_arg(a, File::Mode));
             break;
          case 'i': //integer
             sout << va_arg(a, int);

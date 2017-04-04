@@ -34,7 +34,7 @@ struct Device {
    virtual void line(Coord x1, Coord y1, Coord x2, Coord y2, DrawMode) = 0;
    virtual void ellipse(Coord x, Coord y, Coord rx, Coord ry, bool fill, DrawMode) = 0;
 
-   virtual int peek(Address) = 0;
+   virtual byte peek(Address) = 0;
    virtual void poke(Address, byte value) = 0;
    virtual void call(Address) = 0;
 
