@@ -21,39 +21,6 @@ public:
    static const char *toString(Type type);
 };
 
-// 单个值
-struct Single {
-   Value::Type vtype;
-   union {
-      int ival;
-      double rval;
-   };
-   std::string sval;
-
-public:
-   Single() { }
-   Single(int ival) : vtype(Value::Type::INT), ival(ival) { }
-   Single(double rval) : vtype(Value::Type::REAL), rval(rval) { }
-   Single(const std::string &s) : vtype(Value::Type::STRING), sval(s) { }
-   Single(const char *s) : vtype(Value::Type::STRING), sval(s) { }
-};
-
-// 数组
-struct Array {
-   Value::Type vtype;
-   union Number {
-      int ival;
-      double rval;
-
-      Number(int i) : ival(i) { }
-      Number(double r) : rval(r) { }
-   };
-
-public:
-   std::vector<unsigned> bounds;
-   std::vector<Number> nums;
-   std::vector<std::string> strs;
-};
 
 }
 

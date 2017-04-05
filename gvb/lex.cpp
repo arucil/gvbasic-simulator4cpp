@@ -144,7 +144,7 @@ int Lexer::getToken() {
       char *ppp;
       rval = std::strtod(pp, &ppp);
       if (ppp - pp != sval.size())
-         throw 1;
+         throw NumberFormatError();
       return Token::REAL;
    }
 

@@ -1,7 +1,6 @@
 #include "gvb.h"
 #include <sstream>
 #include <cstdarg>
-#include <cassert>
 #include "error.h"
 #include "lex.h"
 #include "compile.h"
@@ -10,8 +9,7 @@ using namespace gvbsim;
 using namespace std;
 
 
-GVB::GVB(Device *dev) : m_device(dev), m_head(nullptr) {
-   assert(dev);
+GVB::GVB() : m_head(nullptr) {
 }
 
 GVB::~GVB() {
@@ -37,7 +35,10 @@ void GVB::error(int line, int label, const char *s, ...) {
    ostringstream sout;
    va_list a;
 
+   // %.9g
    sout.precision(9);
+   sout.unsetf(ios_base::floatfield);
+
    va_start(a, s);
    while (*s) {
       if (*s == '%') {

@@ -9,10 +9,10 @@
 #include "random.h"
 #include "value.h"
 #include "file.h"
+#include "device.h"
 
 namespace gvbsim {
 
-class Device;
 class Stmt;
 class Dim;
 class Assign;
@@ -20,6 +20,8 @@ class While;
 class DefFn;
 class Expr;
 class Id;
+class For;
+class Next;
 class ArrayAccess;
 class FuncCall;
 class Binary;
@@ -33,7 +35,7 @@ class GVB {
       double dest;
       double step;
       int line, label;
-      Stmt *stmt; // for的下一条语句
+      For *stmt;
    };
 
    struct WhileLoop {
@@ -46,8 +48,42 @@ class GVB {
       Stmt *stmt; // gosub的下一条语句
    };
 
+   // 单个值
+   struct Single {
+      Value::Type vtype;
+      union {
+         int ival;
+         double rval;
+      };
+      std::string sval;
+
+   public:
+      Single() { }
+      Single(int ival) : vtype(Value::Type::INT), ival(ival) { }
+      Single(double rval) : vtype(Value::Type::REAL), rval(rval) { }
+      Single(const std::string &s) : vtype(Value::Type::STRING), sval(s) { }
+      Single(const char *s) : vtype(Value::Type::STRING), sval(s) { }
+   };
+
+   // 数组
+   struct Array {
+      Value::Type vtype;
+      union Number {
+         int ival;
+         double rval;
+
+         Number(int i) : ival(i) { }
+         Number(double r) : rval(r) { }
+      };
+
+   public:
+      std::vector<unsigned> bounds;
+      std::vector<Number> nums;
+      std::vector<std::string> strs;
+   };
+
 private:
-   Device *const m_device;
+   Device m_device;
    Stmt *m_head;
    std::vector<Single> m_stack;
    Single m_top;
@@ -64,7 +100,7 @@ private:
    int m_line, m_label;
 
 public:
-   explicit GVB(Device *);
+   GVB();
    ~GVB();
 
    void build(std::FILE *fp);
@@ -81,6 +117,8 @@ private:
 
    void exe_dim(Dim *);
    void exe_assign(Assign *);
+   void exe_for(For *);
+   Stmt *exe_next(Next *);
 
    void eval(Expr *);
    void evalPop(Expr *);

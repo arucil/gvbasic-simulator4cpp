@@ -2,7 +2,6 @@
 #include <ctime>
 #include <cassert>
 #include <cmath>
-#include "device.h"
 #include "compile.h"
 #include "tree.h"
 #include "real.h"
@@ -25,7 +24,7 @@ void GVB::execute() {
    clearFiles();
    m_funcs.clear();
 
-   m_device->setMode(Device::ScreenMode::TEXT);
+   m_device.setMode(Device::ScreenMode::TEXT);
 
    traverse(m_head);
 }
@@ -40,6 +39,12 @@ void GVB::clearStack() {
    m_subs.clear();
    m_fors.clear();
    m_whiles.clear();
+}
+
+void GVB::clearFiles() {
+   m_files[0].close();
+   m_files[1].close();
+   m_files[2].close();
 }
 
 void GVB::traverse(Stmt *s) {
@@ -69,19 +74,19 @@ void GVB::traverse(Stmt *s) {
          break;
 
       case Stmt::Type::INKEY:
-         m_device->getKey();
+         m_device.getKey();
          break;
 
       case Stmt::Type::CLS:
-         m_device->cls();
+         m_device.cls();
          break;
 
       case Stmt::Type::GRAPH:
-         m_device->setMode(Device::ScreenMode::GRAPH);
+         m_device.setMode(Device::ScreenMode::GRAPH);
          break;
 
       case Stmt::Type::TEXT:
-         m_device->setMode(Device::ScreenMode::TEXT);
+         m_device.setMode(Device::ScreenMode::TEXT);
          break;
 
       case Stmt::Type::DIM:
@@ -91,11 +96,21 @@ void GVB::traverse(Stmt *s) {
       case Stmt::Type::ASSIGN:
          exe_assign(static_cast<Assign *>(s));
          break;
+
+      case Stmt::Type::FOR:
+         exe_for(static_cast<For *>(s));
+         break;
+
+      case Stmt::Type::NEXT:
+         s = exe_next(static_cast<Next *>(s));
+         break;
       }
+
+      s = s->next;
    }
 }
 
-void GVB::exe_dim(Dim *d1) {
+inline void GVB::exe_dim(Dim *d1) {
    Id *id1 = d1->id;
 
    switch (id1->type) {
@@ -157,8 +172,183 @@ void GVB::exe_dim(Dim *d1) {
    }
 }
 
-void GVB::exe_assign(Assign *a1) {
+inline void GVB::exe_assign(Assign *a1) {
+   eval(a1->val);
+   Id *id1 = a1->id;
 
+   if (Expr::Type::ID == id1->type) { // 变量
+      m_top = m_stack.back();
+      m_stack.pop_back();
+
+      auto it = m_envVar.find(id1->id);
+      if (m_envVar.end() == it) { // 变量不存在
+         m_envVar[id1->id].vtype = id1->vtype;
+         it = m_envVar.find(id1->id);
+      }
+
+      switch (id1->vtype) {
+      case Value::Type::INT:
+         if (m_top.rval > INT16_MAX || m_top.rval < INT16_MIN) {
+            rerror("Integer overflow in assignment: %f", m_top.rval);
+         }
+         it->second.ival = static_cast<int>(m_top.rval);
+         break;
+      case Value::Type::REAL:
+         it->second.rval = m_top.rval;
+         break;
+      case Value::Type::STRING:
+         it->second.sval = m_top.sval;
+         break;
+      default:
+         assert(0);
+      }
+   } else { // 数组
+      ArrayAccess *ac1 = static_cast<ArrayAccess *>(id1);
+
+      auto it = m_envArray.find(id1->id);
+      if (m_envArray.end() == it) { // 数组不存在
+         auto &arr1 = m_envArray[id1->id];
+         arr1.bounds.resize(ac1->indices.size(), 11u);
+         unsigned total = 1;
+         for (auto j = ac1->indices.size(); j > 0; --j)
+            total *= 11;
+
+         switch (arr1.vtype = id1->vtype) {
+         case Value::Type::INT:
+            arr1.nums.resize(total, 0);
+            break;
+         case Value::Type::REAL:
+            arr1.nums.resize(total, 0.0);
+            break;
+         case Value::Type::STRING:
+            arr1.strs.resize(total, "");
+            break;
+         default:
+            assert(0);
+         }
+
+         it = m_envArray.find(id1->id);
+      }
+      const auto &arr1 = it->second;
+
+      if (ac1->indices.size() != arr1.bounds.size()) {
+         rerror("Array dimension mismatch: expecting %i, got %i",
+                static_cast<int>(arr1.bounds.size()),
+                static_cast<int>(ac1->indices.size()));
+      }
+
+      evalPop(ac1->indices[0]);
+      if (m_top.rval < 0 || m_top.rval >= arr1.bounds[0]) {
+         rerror("Bad index in array: %s 0[%f]", ac1->id, m_top.rval);
+      }
+
+      unsigned total = static_cast<unsigned>(m_top.rval);
+      for (size_t i = 0; i < ac1->indices.size(); ++i) {
+         evalPop(ac1->indices[i]);
+         if (m_top.rval < 0 || m_top.rval >= arr1.bounds[i]) {
+            rerror("Bad index in array: %s %i[%f]", ac1->id,
+                   static_cast<int>(i), m_top.rval);
+         }
+         total = total * arr1.bounds[i] + static_cast<unsigned>(m_top.rval);
+      }
+
+      m_top = m_stack.back();
+      m_stack.pop_back();
+
+      switch (arr1.vtype) {
+      case Value::Type::INT:
+         if (m_top.rval > INT16_MAX || m_top.rval < INT16_MIN) {
+            rerror("Integer overflow in array assignment: %f", m_top.rval);
+         }
+         arr1.nums[total].ival = static_cast<int>(m_top.rval);
+         break;
+      case Value::Type::REAL:
+         arr1.nums[total].rval = m_top.rval;
+         break;
+      case Value::Type::STRING:
+         arr1.strs[total] = m_top.sval;
+         break;
+      default:
+         assert(0);
+      }
+   }
+}
+
+inline void GVB::exe_for(For *f1) {
+   if (m_fors.size()) {
+      // 查找是否存在自变量相同的for循环，如果存在则要清除
+      for (auto i = m_fors.begin(); i != m_fors.end(); ++i) {
+         if (i->stmt->var == f1->var) {
+            // 清空内层循环及本循环
+            m_fors.erase(i, m_fors.end());
+            break;
+         }
+      }
+   }
+   m_fors.push_back(ForLoop());
+
+   auto &top = m_fors.back();
+   top.stmt = f1;
+   top.line = m_line;
+   top.label = m_label;
+
+   evalPop(f1->dest);
+   top.dest = m_top.rval;
+
+   evalPop(f1->step);
+   top.step = m_top.rval;
+
+   /* for至少会执行一次
+    * 如for i = 1 to 0: print i: next
+    * 则print i会执行一次，for循环结束后i的值为2
+    * */
+}
+
+inline Stmt *GVB::exe_next(Next *n1) {
+   if (n1->var.empty()) { // 没有自变量，使用栈顶的for
+      if (m_fors.empty()) {
+         rerror("Next without for");
+      }
+   } else { // 有自变量，查找变量相同的for
+      while (m_fors.size()) {
+         if (m_fors.back().stmt->var == n1->var)
+            break;
+         m_fors.pop_back();
+      }
+
+      if (m_fors.empty()) {
+         rerror("Next without for: NEXT %s", n1->var);
+      }
+   }
+   auto &top = m_fors.back();
+
+   // 修改自变量
+   double r1; // 修改后的自变量值
+   auto &var1 = m_envVar[top.stmt->var];
+   switch (var1.vtype) {
+   case Value::Type::INT: {
+      r1 = var1.ival + top.step;
+      if (r1 > INT16_MAX || r1 < INT16_MIN) {
+         rerror("Integer overflow in For: %f", r1);
+      }
+      var1.ival = static_cast<int>(r1);
+      break;
+   }
+   case Value::Type::REAL:
+      r1 = var1.rval += top.step; // 不考虑double的溢出
+      break;
+   default:
+      assert(0);
+   }
+
+   // 判断for结束条件
+   if (top.step >= 0 ? r1 > top.dest : (r1 < top.dest)) {
+      m_fors.pop_back();
+      m_line = top.line;
+      m_label = top.label;
+      return top.stmt;
+   }
+   return n1;
 }
 
 inline void GVB::evalPop(Expr *e1) {
@@ -185,7 +375,7 @@ void GVB::eval(Expr *e1) {
       break;
 
    case Expr::Type::INKEY:
-      m_stack.push_back(Single(string(1u, static_cast<char>(m_device->getKey()))));
+      m_stack.push_back(Single(string(1u, static_cast<char>(m_device.getKey()))));
       break;
 
    case Expr::Type::FUNCCALL:
@@ -574,7 +764,7 @@ inline void GVB::eval_func(FuncCall *fc) {
    }
 
    case Func::Type::POS:
-      m_stack.back().rval = m_device->getX() + 1;
+      m_stack.back().rval = m_device.getX() + 1;
       break;
 
    case Func::Type::RND: {
@@ -641,7 +831,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       if (m_stack.back().rval < 0 || m_stack.back().rval > UINT16_MAX) {
          rerror("Illegal argument: PEEK(%f)", m_stack.back().rval);
       }
-      m_stack.back().rval = m_device->peek(
+      m_stack.back().rval = m_device.peek(
             static_cast<Device::Address>(m_stack.back().rval));
       break;
 

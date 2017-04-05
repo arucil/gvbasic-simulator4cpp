@@ -31,7 +31,7 @@ Compiler::Compiler(FILE *fp, NodeManager &nm, DataManager &dm)
 void Compiler::peek() {
    try {
       m_tok = m_l.getToken();
-   } catch (int) {
+   } catch (Lexer::NumberFormatError) {
       cerror("Number format error");
    }
 }

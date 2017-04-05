@@ -22,6 +22,9 @@ struct Token {
 
 class Lexer {
 public:
+   typedef int NumberFormatError;
+
+public:
    int32_t ival;
    double rval;
    std::string sval;
