@@ -17,10 +17,6 @@ public:
       CLEAR, PAINT, XOR
    };
 
-   typedef std::uint8_t Coord;
-   typedef std::uint8_t byte;
-   typedef std::uint16_t Address;
-
 public:
    Device();
 
@@ -28,21 +24,21 @@ public:
    void appendText(const std::string &);
    void nextRow(); //如果滚屏则屏幕上滚一行
    void updateLCD();
-   void locate(byte row, byte col);
+   void locate(uint8_t row, uint8_t col);
    int getX();
    int getY();
    void setMode(ScreenMode mode);
    void cls();
    std::string input();
-   byte getKey();
-   void point(Coord x, Coord y, DrawMode);
-   void rectangle(Coord x1, Coord y1, Coord x2, Coord y2, bool fill, DrawMode);
-   void line(Coord x1, Coord y1, Coord x2, Coord y2, DrawMode);
-   void ellipse(Coord x, Coord y, Coord rx, Coord ry, bool fill, DrawMode);
+   uint8_t getKey();
+   void point(uint8_t x, uint8_t y, DrawMode);
+   void rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, bool fill, DrawMode);
+   void line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, DrawMode);
+   void ellipse(uint8_t x, uint8_t y, uint8_t rx, uint8_t ry, bool fill, DrawMode);
 
-   byte peek(Address);
-   void poke(Address, byte value);
-   void call(Address);
+   uint8_t peek(uint16_t);
+   void poke(uint16_t, uint8_t value);
+   void call(uint16_t);
 
    void sleep(int ticks);
 };

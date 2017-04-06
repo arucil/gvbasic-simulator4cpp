@@ -17,7 +17,7 @@ struct Stmt : Node { // 语句
       GOSUB, RETURN, READ, RESTORE, INPUT, FINPUT, PRINT, LOCATE, INKEY,
       GRAPH, TEXT, DRAW, LINE, BOX, CIRCLE, ELLIPSE, OPEN, CLOSE, PUT,
       GET, LSET, RSET, POP, CLEAR, WRITE, POKE, CALL, END, FIELD, GOTO,
-      INVERSE, DEFFN, PLAY, BEEP, NEWLINE, SLEEP,
+      INVERSE, DEFFN, PLAY, BEEP, NEWLINE, SLEEP, PAINT
    };
 
 public:
@@ -445,6 +445,15 @@ public:
    XSleep(Expr *ticks)
          : Stmt(Type::SLEEP),
            ticks(ticks) { }
+};
+
+struct XPaint : Stmt {
+   Expr *addr, *x, *y, *w, *h, *mode;
+
+public:
+   XPaint(Expr *addr, Expr *x, Expr *y, Expr *w, Expr *h, Expr *mode)
+         : Stmt(Type::PAINT),
+           addr(addr), x(x), y(y), w(w), h(h), mode(mode) { }
 };
 
 }

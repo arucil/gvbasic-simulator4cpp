@@ -459,9 +459,29 @@ Stmt *Compiler::stmt(bool inIf) { // 可能为null
          }
          cerror("Token error: [%c], statement expected", m_tok);
 
-      case Token::SLEEP: {
+      case Token::SLEEP:
          peek();
          return m_nodeMan.make<XSleep>(expr(Value::Type::REAL));
+
+      case Token::PAINT: {
+         peek();
+         Expr *addr = expr(Value::Type::REAL);
+         match(',');
+         Expr *x = expr(Value::Type::REAL);
+         match(',');
+         Expr *y = expr(Value::Type::REAL);
+         match(',');
+         Expr *w = expr(Value::Type::REAL);
+         match(',');
+         Expr *h = expr(Value::Type::REAL);
+         Expr *mode;
+         if (',' == m_tok) {
+            peek();
+            mode = expr(Value::Type::REAL);
+         } else {
+            mode = nullptr;
+         }
+         return m_nodeMan.make<XPaint>(addr, x, y, w, h, mode);
       }
 
       default: // eol, eof, else ...

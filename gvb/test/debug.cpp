@@ -420,6 +420,24 @@ void print(Stmt *s, int lv, ostream &out) {
       out << "SLEEP ";
       print(((XSleep *) s)->ticks, out);
       break;
+   case Stmt::Type::PAINT: {
+      XPaint *p1 = (XPaint *) s;
+      out << "PAINT ";
+      print(p1->addr, out);
+      out << ", ";
+      print(p1->x, out);
+      out << ", ";
+      print(p1->y, out);
+      out << ", ";
+      print(p1->w, out);
+      out << ", ";
+      print(p1->h, out);
+      if (p1->mode) {
+         out << ", ";
+         print(p1->mode, out);
+      }
+      break;
+   }
    case Stmt::Type::PLAY:
       out << "PLAY ";
       print(((Play *) s)->str, out);

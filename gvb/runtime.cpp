@@ -229,7 +229,7 @@ inline void GVB::exe_assign(Assign *a1) {
 
          it = m_envArray.find(id1->id);
       }
-      const auto &arr1 = it->second;
+      auto &arr1 = it->second;
 
       if (ac1->indices.size() != arr1.bounds.size()) {
          rerror("Array dimension mismatch: expecting %i, got %i",
@@ -832,7 +832,7 @@ inline void GVB::eval_func(FuncCall *fc) {
          rerror("Illegal argument: PEEK(%f)", m_stack.back().rval);
       }
       m_stack.back().rval = m_device.peek(
-            static_cast<Device::Address>(m_stack.back().rval));
+            static_cast<uint16_t>(m_stack.back().rval));
       break;
 
    case Func::Type::FEOF: {

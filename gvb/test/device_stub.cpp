@@ -16,7 +16,7 @@ void Device::nextRow() {
    cout << endl;
 }
 
-Device::byte Device::getKey() {
+uint8_t Device::getKey() {
    return cin.get();
 }
 
@@ -30,7 +30,7 @@ void Device::updateLCD() {
 
 }
 
-void Device::locate(byte row, byte col) { }
+void Device::locate(uint8_t row, uint8_t col) { }
 
 int Device::getX() { return 0; }
 
@@ -40,20 +40,20 @@ void Device::setMode(ScreenMode mode) { }
 
 void Device::cls() { }
 
-void Device::point(Coord x, Coord y, DrawMode) { }
+void Device::point(uint8_t x, uint8_t y, DrawMode) { }
 
-void Device::rectangle(Coord x1, Coord y1, Coord x2, Coord y2, bool fill,
+void Device::rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, bool fill,
                        DrawMode) { }
 
-void Device::line(Coord x1, Coord y1, Coord x2, Coord y2, DrawMode) { }
+void Device::line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, DrawMode) { }
 
-void Device::ellipse(Coord x, Coord y, Coord rx, Coord ry, bool fill,
+void Device::ellipse(uint8_t x, uint8_t y, uint8_t rx, uint8_t ry, bool fill,
                      DrawMode) { }
 
-Device::byte Device::peek(Address) { return 0; }
+uint8_t Device::peek(uint16_t) { return 0; }
 
-void Device::poke(Address, byte value) { }
+void Device::poke(uint16_t, uint8_t value) { }
 
-void Device::call(Address) { }
+void Device::call(uint16_t) { }
 
 void Device::sleep(int ticks) { }
