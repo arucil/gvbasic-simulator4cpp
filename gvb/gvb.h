@@ -26,21 +26,29 @@ class ArrayAccess;
 class FuncCall;
 class Binary;
 class UserCall;
+class While;
+class If;
+class Print;
 
 
 class GVB {
    friend class Compiler;
 
-   struct ForLoop {
-      double dest;
-      double step;
+   struct Loop {
       int line, label;
-      For *stmt;
-   };
 
-   struct WhileLoop {
-      int line, label;
-      While *stmt;
+      union {
+         Stmt *stmt;
+
+         struct {
+            For *stmt;
+            double dest, step;
+         } _for;
+
+         struct {
+            While *stmt;
+         } _while;
+      };
    };
 
    struct Sub {
@@ -88,8 +96,7 @@ private:
    std::vector<Single> m_stack;
    Single m_top;
    std::vector<Sub> m_subs;
-   std::vector<WhileLoop> m_whiles;
-   std::vector<ForLoop> m_fors;
+   std::vector<Loop> m_loops;
    std::unordered_map<std::string, DefFn *> m_funcs; // 用户定义函数
    std::unordered_map<std::string, Single> m_envVar;
    std::unordered_map<std::string, Array> m_envArray;
@@ -119,6 +126,10 @@ private:
    void exe_assign(Assign *);
    void exe_for(For *);
    Stmt *exe_next(Next *);
+   Stmt *exe_while(While *);
+   Stmt *exe_wend();
+   void exe_print(Print *);
+   Stmt *exe_if(If *);
 
    void eval(Expr *);
    void evalPop(Expr *);
@@ -130,6 +141,8 @@ private:
 
 private:
    static void error(int line, int label, const char *s, ...);
+
+   static std::string &removeAllOf(std::string &, const char *, size_t);
 };
 
 }

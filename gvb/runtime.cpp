@@ -37,8 +37,7 @@ void GVB::clearEnv() {
 void GVB::clearStack() {
    m_stack.clear();
    m_subs.clear();
-   m_fors.clear();
-   m_whiles.clear();
+   m_loops.clear();
 }
 
 void GVB::clearFiles() {
@@ -104,6 +103,22 @@ void GVB::traverse(Stmt *s) {
       case Stmt::Type::NEXT:
          s = exe_next(static_cast<Next *>(s));
          break;
+
+      case Stmt::Type::WHILE:
+         s = exe_while(static_cast<While *>(s));
+         continue; // 注意是continue
+
+      case Stmt::Type::WEND:
+         s = exe_wend();
+         continue; // 注意是continue
+
+      case Stmt::Type::PRINT:
+         exe_print(static_cast<Print *>(s));
+         break;
+
+      case Stmt::Type::IF:
+         s = exe_if(static_cast<If *>(s));
+         continue; // 注意是continue
       }
 
       s = s->next;
@@ -275,28 +290,30 @@ inline void GVB::exe_assign(Assign *a1) {
 }
 
 inline void GVB::exe_for(For *f1) {
-   if (m_fors.size()) {
+   if (m_loops.size()) {
       // 查找是否存在自变量相同的for循环，如果存在则要清除
-      for (auto i = m_fors.begin(); i != m_fors.end(); ++i) {
-         if (i->stmt->var == f1->var) {
+      auto i = m_loops.end();
+      do {
+         --i;
+         if (i->stmt->type == Stmt::Type::FOR && i->_for.stmt->var == f1->var) {
             // 清空内层循环及本循环
-            m_fors.erase(i, m_fors.end());
+            m_loops.erase(i, m_loops.end());
             break;
          }
-      }
+      } while (i != m_loops.begin());
    }
-   m_fors.push_back(ForLoop());
+   m_loops.push_back(Loop());
 
-   auto &top = m_fors.back();
+   auto &top = m_loops.back();
    top.stmt = f1;
    top.line = m_line;
    top.label = m_label;
 
    evalPop(f1->dest);
-   top.dest = m_top.rval;
+   top._for.dest = m_top.rval;
 
    evalPop(f1->step);
-   top.step = m_top.rval;
+   top._for.step = m_top.rval;
 
    /* for至少会执行一次
     * 如for i = 1 to 0: print i: next
@@ -305,29 +322,26 @@ inline void GVB::exe_for(For *f1) {
 }
 
 inline Stmt *GVB::exe_next(Next *n1) {
-   if (n1->var.empty()) { // 没有自变量，使用栈顶的for
-      if (m_fors.empty()) {
-         rerror("Next without for");
-      }
-   } else { // 有自变量，查找变量相同的for
-      while (m_fors.size()) {
-         if (m_fors.back().stmt->var == n1->var)
-            break;
-         m_fors.pop_back();
-      }
-
-      if (m_fors.empty()) {
-         rerror("Next without for: NEXT %s", n1->var);
-      }
+   // 查找自变量相同的for，如果内层有其他循环，全部清除
+   while (m_loops.size()) {
+      auto &i = m_loops.back();
+      if (i.stmt->type == Stmt::Type::FOR
+            && (n1->var.empty() || i._for.stmt->var == n1->var))
+         break;
+      m_loops.pop_back();
    }
-   auto &top = m_fors.back();
+
+   if (m_loops.empty()) {
+      rerror("Next without for: NEXT %s", n1->var);
+   }
+   auto &top = m_loops.back();
 
    // 修改自变量
    double r1; // 修改后的自变量值
-   auto &var1 = m_envVar[top.stmt->var];
+   auto &var1 = m_envVar[top._for.stmt->var];
    switch (var1.vtype) {
    case Value::Type::INT: {
-      r1 = var1.ival + top.step;
+      r1 = var1.ival + top._for.step;
       if (r1 > INT16_MAX || r1 < INT16_MIN) {
          rerror("Integer overflow in For: %f", r1);
       }
@@ -335,20 +349,125 @@ inline Stmt *GVB::exe_next(Next *n1) {
       break;
    }
    case Value::Type::REAL:
-      r1 = var1.rval += top.step; // 不考虑double的溢出
+      r1 = var1.rval += top._for.step; // 不考虑double的溢出
       break;
    default:
       assert(0);
    }
 
    // 判断for结束条件
-   if (top.step >= 0 ? r1 > top.dest : (r1 < top.dest)) {
-      m_fors.pop_back();
+   if (top._for.step >= 0 ? r1 > top._for.dest : (r1 < top._for.dest)) {
+      m_loops.pop_back();
       m_line = top.line;
       m_label = top.label;
       return top.stmt;
    }
    return n1;
+}
+
+inline Stmt *GVB::exe_while(While *w1) {
+   if (m_loops.size()) {
+      // 查找是否存在同一个while循环，如果内层有其他循环，全部清除
+      auto i = m_loops.end();
+      do {
+         --i;
+         if (i->stmt == w1) {
+            m_loops.erase(i, m_loops.end()); // 清空内层循环及本循环
+            break;
+         }
+      } while (i != m_loops.begin());
+   }
+   m_loops.push_back(Loop());
+
+   evalPop(w1->cond);
+   if (0 == m_top.rval) {
+      // 查找对应的wend。
+      // 直接顺序查找，忽略while和wend之间的goto：
+      // 30 while 0
+      // 40 goto 20  // 会忽略这里的goto，直接跳到50行的wend之后
+      // 50 wend
+      m_loops.pop_back();
+      Stmt *s = w1->next;
+      int level = 0;
+      while (s) {
+         if (s->type == Stmt::Type::WEND) {
+            if (!level)
+               return s->next;
+            --level;
+         } else if (s->type == Stmt::Type::WHILE) {
+            ++level;
+         }
+         s = s->next;
+      }
+      return nullptr;
+   } else {
+      return w1->next;
+   }
+}
+
+inline Stmt *GVB::exe_wend() {
+   while (m_loops.size()) {
+      if (m_loops.back().stmt->type == Stmt::Type::WHILE)
+         break;
+      m_loops.pop_back();
+   }
+   if (m_loops.empty()) {
+      rerror("Wend withour while");
+   }
+
+   Stmt *w1 = m_loops.back().stmt;
+   m_loops.pop_back();
+   return w1;
+}
+
+inline void GVB::exe_print(Print *p1) {
+   for (auto &i : p1->exprs) {
+      if (i.first) {
+         if (i.first->type == Expr::Type::FUNCCALL
+                  && static_cast<FuncCall *>(i.first)->isPrintFunc()) {
+            auto fc1 = static_cast<FuncCall *>(i.first);
+            switch (fc1->ftype) {
+            case Func::Type::TAB: {
+               evalPop(fc1->expr1);
+               if (m_top.rval < 1 || m_top.rval > 20) {
+                  rerror("Illegal argument in PRINT: TAB(%f)", m_top.rval);
+               }
+               int tab = static_cast<int>(m_top.rval);
+               if (m_device.getX() >= tab)
+                  m_device.nextRow();
+               m_device.locate(m_device.getY(), tab - 1);
+               break;
+            }
+
+            case Func::Type::SPC:
+               evalPop(fc1->expr1);
+               if (m_top.rval < 0 || m_top.rval > UINT8_MAX) {
+                  rerror("Illegal argument in PRINT: SPC(%f)", m_top.rval);
+               }
+               m_device.appendText(string(static_cast<size_t>(m_top.rval), ' '));
+               break;
+
+            default:
+               assert(0);
+            }
+         } else {
+            evalPop(i.first);
+            if (m_top.vtype == Value::Type::STRING) {
+               m_device.appendText(removeAllOf(m_top.sval, "\x1f\0", 2))
+            } else {
+               char buf[50];
+               sprintf(buf, "%.9G", m_top.rval);
+            }
+         }
+      }
+
+      // 显示的文字刚好填满一行的时候就不用换行了
+      if (i.second == Print::Delimiter::CR && m_device.getX() > 0) {
+         m_device.nextRow();
+      }
+   }
+
+   m_device.updateLCD();
 }
 
 inline void GVB::evalPop(Expr *e1) {

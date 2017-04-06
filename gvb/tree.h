@@ -82,6 +82,11 @@ public:
             Expr *expr3 = nullptr)
          : Expr(Type::FUNCCALL, vt),
            expr1(expr1), expr2(expr2), expr3(expr3), ftype(ftype) { }
+
+public:
+   bool isPrintFunc() const {
+      return (static_cast<int>(ftype) & Func::PRINT_FUNC_MASK) != 0;
+   }
 };
 
 struct UserCall : Expr { // 用户自定义函数调用

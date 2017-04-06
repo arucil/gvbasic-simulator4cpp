@@ -1,6 +1,7 @@
 #include "gvb.h"
 #include <sstream>
 #include <cstdarg>
+#include <cstring>
 #include "error.h"
 #include "lex.h"
 #include "compile.h"
@@ -87,4 +88,20 @@ void GVB::error(int line, int label, const char *s, ...) {
    va_end(a);
 
    throw Exception(line, label, sout.str());
+}
+
+string &GVB::removeAllOf(std::string &s, const char *c, size_t n) {
+   bool tab[128];
+   memset(tab, 0, sizeof tab);
+
+   while (n-- > 0)
+      tab[*c++] = true;
+
+   size_t j = 0;
+   for (size_t i = 0; i < s.size(); ++i) {
+      if (tab[s[i]])
+         s[j++] = s[i];
+   }
+   s.resize(j);
+   return s;
 }
