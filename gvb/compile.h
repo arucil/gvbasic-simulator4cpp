@@ -77,14 +77,17 @@ private:
    Expr *idexpr();
    Id *getId();
 
+   static void translateUserCall(Expr *, const std::string &, const std::string &);
+
    static int getp(int op);
-   static Value::Type getIdRValType(const std::string &);
    static Value::Type getRValType(Value::Type);
+   static const char *getTypeSuffix(const std::string &);
    static std::string &addCNPrefix(std::string &);
    static std::string &rtrim(std::string &);
 
 public:
    static Value::Type getIdType(const std::string &);
+   static Value::Type getIdRValType(const std::string &);
 };
 
 }

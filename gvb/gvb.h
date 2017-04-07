@@ -28,6 +28,7 @@ class Binary;
 class UserCall;
 class While;
 class If;
+class On;
 class Print;
 
 
@@ -44,16 +45,15 @@ class GVB {
             For *stmt;
             double dest, step;
          } _for;
-
-         struct {
-            While *stmt;
-         } _while;
       };
    };
 
    struct Sub {
       int line, label;
       Stmt *stmt; // gosub的下一条语句
+
+      Sub(int line, int label, Stmt *stmt)
+            : line(line), label(label), stmt(stmt) { }
    };
 
    // 单个值
@@ -130,6 +130,7 @@ private:
    Stmt *exe_wend();
    void exe_print(Print *);
    Stmt *exe_if(If *);
+   Stmt *exe_on(On *);
 
    void eval(Expr *);
    void evalPop(Expr *);

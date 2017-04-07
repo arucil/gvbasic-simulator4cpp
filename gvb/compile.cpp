@@ -578,7 +578,44 @@ inline Stmt *Compiler::defstmt() {
    match(')');
    match('=');
 
-   return m_nodeMan.make<DefFn>(f, var, expr(getIdRValType(f)));
+   Expr *fn = expr(getIdRValType(f));
+
+   string newVar = string("_") + getTypeSuffix(var);
+   translateUserCall(fn, var, newVar);
+
+   return m_nodeMan.make<DefFn>(f, newVar, fn);
+}
+
+// 将def fn函数自变量替换成另一个变量
+void Compiler::translateUserCall(Expr *e1, const string &s0, const string &s1) {
+   switch (e1->type) {
+   case Expr::Type::BINARY:
+      return translateUserCall(static_cast<Binary *>(e1)->left, s0, s1),
+            translateUserCall(static_cast<Binary *>(e1)->right, s0, s1);
+   case Expr::Type::ARRAYACCESS:
+      for (Expr *i : static_cast<ArrayAccess *>(e1)->indices)
+         translateUserCall(i, s0, s1);
+      return;
+   case Expr::Type::FUNCCALL: {
+      auto fc1 = static_cast<FuncCall *>(e1);
+      translateUserCall(fc1->expr1, s0, s1);
+      if (fc1->expr2) {
+         translateUserCall(fc1->expr2, s0, s1);
+         if (fc1->expr3)
+            translateUserCall(fc1->expr3, s0, s1);
+      }
+      return;
+   }
+   case Expr::Type::ID:
+      if (static_cast<Id *>(e1)->id == s0)
+         static_cast<Id *>(e1)->id = s1;
+      return;
+   case Expr::Type::USERCALL:
+      translateUserCall(static_cast<UserCall *>(e1)->expr, s0, s1);
+      return;
+   default:
+      return;
+   }
 }
 
 inline Stmt *Compiler::printstmt() {
@@ -947,6 +984,7 @@ Expr *Compiler::F() {
       peek();
       return m_nodeMan.make<Real>(r);
    }
+
    case Token::REAL: {
       double r = m_l.rval;
       peek();
@@ -959,11 +997,13 @@ Expr *Compiler::F() {
 
       return m_nodeMan.make<Real>(r);
    }
+
    case Token::STRING: {
       string s = addCNPrefix(m_l.sval);
       peek();
       return m_nodeMan.make<Str>(s);
    }
+
    case '+': case '-': {
       int i1 = m_tok;
       peek();
@@ -976,6 +1016,7 @@ Expr *Compiler::F() {
              m_nodeMan.make<FuncCall>(Func::Type::NEG, Value::Type::REAL, e1)
             : e1;
    }
+
    case Token::NOT: {
       peek();
       Expr *e1 = E_(PREC_NOT);
@@ -985,15 +1026,18 @@ Expr *Compiler::F() {
       }
       return m_nodeMan.make<FuncCall>(Func::Type::NOT, Value::Type::REAL, e1);
    }
+
    case Token::INKEY:
       peek();
       return m_nodeMan.make<Inkey>();
+
    case '(': {
       peek();
       Expr *e1 = expr();
       match(')');
       return e1;
    }
+
    case Token::FN: {
       peek();
       string id = m_l.sval;
@@ -1003,8 +1047,10 @@ Expr *Compiler::F() {
       match(')');
       return m_nodeMan.make<UserCall>(e1, id, getIdRValType(id));
    }
+
    case Token::ID:
       return idexpr();
+
    default:
       cerror("Token error: [%c], expression expected", m_tok);
    }
@@ -1069,6 +1115,15 @@ Value::Type Compiler::getIdType(const string &id) {
    case '$': return Value::Type::STRING;
    case '%': return Value::Type::INT;
    default: return Value::Type::REAL;
+   }
+}
+
+inline const char *Compiler::getTypeSuffix(const std::string &s) {
+   switch (s.back()) {
+   case '$': return "$";
+   case '%': return "%";
+   default:
+      return "";
    }
 }
 

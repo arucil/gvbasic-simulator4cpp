@@ -32,6 +32,11 @@ void GVB::execute() {
 void GVB::clearEnv() {
    m_envVar.clear();
    m_envArray.clear();
+
+   // 用于user call
+   m_envVar["_"].vtype = Value::Type::REAL;
+   m_envVar["_%"].vtype = Value::Type::INT;
+   m_envVar["_$"].vtype = Value::Type::STRING;
 }
 
 void GVB::clearStack() {
@@ -119,6 +124,53 @@ void GVB::traverse(Stmt *s) {
       case Stmt::Type::IF:
          s = exe_if(static_cast<If *>(s));
          continue; // 注意是continue
+
+      case Stmt::Type::GOSUB:
+         if (m_subs.size() >= UINT16_MAX) {
+            rerror("Stack overflow in GOSUB");
+         }
+         m_subs.push_back(Sub(m_line, m_label, s->next));
+         // fall through
+
+      case Stmt::Type::GOTO:
+         s = static_cast<Goto *>(s)->stm;
+         continue; //
+
+      case Stmt::Type::RETURN:
+         if (m_subs.empty()) {
+            rerror("Return without gosub");
+         }
+         m_line = m_subs.back().line;
+         m_label = m_subs.back().label;
+         s = m_subs.back().stmt;
+         m_subs.pop_back();
+         continue; //
+
+      case Stmt::Type::POP:
+         if (m_subs.empty()) {
+            rerror("Pop without gosub");
+         }
+         m_subs.pop_back();
+         break;
+
+      case Stmt::Type::ON:
+         s = exe_on(static_cast<On *>(s));
+         continue; //
+
+      case Stmt::Type::DEFFN:
+         // 如果自定义函数已存在，则覆盖
+         m_funcs[static_cast<DefFn *>(s)->fnName] = static_cast<DefFn *>(s);
+         break;
+
+      case Stmt::Type::RESTORE:
+         if (static_cast<Restore *>(s)->label == Restore::NO_LABEL) {
+            m_dataMan.restore();
+         } else {
+            m_dataMan.restore(static_cast<Restore *>(s)->label);
+         }
+         break;
+
+      case Stmt::Type::LOCATE:
       }
 
       s = s->next;
@@ -453,7 +505,7 @@ inline void GVB::exe_print(Print *p1) {
          } else {
             evalPop(i.first);
             if (m_top.vtype == Value::Type::STRING) {
-               m_device.appendText(removeAllOf(m_top.sval, "\x1f\0", 2))
+               m_device.appendText(removeAllOf(m_top.sval, "\x1f\0", 2));
             } else {
                char buf[50];
                sprintf(buf, "%.9G", m_top.rval);
@@ -468,6 +520,30 @@ inline void GVB::exe_print(Print *p1) {
    }
 
    m_device.updateLCD();
+}
+
+inline Stmt *GVB::exe_if(If *if1) {
+   evalPop(if1->cond);
+   if (0. != m_top.rval)
+      return if1->stmThen;
+   else if (if1->stmElse)
+      return if1->stmElse;
+   return if1->next;
+}
+
+inline Stmt *GVB::exe_on(On *on1) {
+   evalPop(on1->cond);
+   if (m_top.rval >= 1 && m_top.rval <= on1->addrs.size()) {
+      if (on1->isSub) {
+         if (m_subs.size() >= UINT16_MAX) {
+            rerror("Stack overflow in ON-GOSUB");
+         }
+         m_subs.push_back(Sub(m_line, m_label, on1->next));
+      }
+
+      return on1->addrs[static_cast<size_t>(m_top.rval)].stm;
+   }
+   return on1->next;
 }
 
 inline void GVB::evalPop(Expr *e1) {
@@ -995,6 +1071,43 @@ inline void GVB::eval_func(FuncCall *fc) {
    }
 }
 
-inline void GVB::eval_usercall(UserCall *uc) {
+inline void GVB::eval_usercall(UserCall *uc1) {
+   auto f1 = m_funcs[uc1->fnName];
+   if (nullptr == f1) {
+      rerror("Function undefined: %s", uc1->fnName);
+   }
 
+   if (Compiler::getIdRValType(f1->varName) != uc1->expr->vtype) {
+      rerror("Incompatible type in FN %s(%s: %t): [%t]",
+             uc1->fnName, f1->varName, Compiler::getIdRValType(f1->varName),
+             uc1->expr->vtype);
+   }
+
+   evalPop(uc1->expr);
+
+   auto &var = m_envVar[f1->varName];
+   switch (var.vtype) {
+   case Value::Type::INT:
+      if (m_top.rval < INT16_MIN || m_top.rval > INT16_MAX) {
+         rerror("Integer overflow in user-call: %f", m_top.rval);
+      }
+      var.ival = static_cast<int>(m_top.rval);
+      break;
+   case Value::Type::REAL:
+      var.rval = m_top.rval;
+      break;
+   case Value::Type::STRING:
+      var.sval = m_top.sval;
+      break;
+   default:
+      assert(0);
+   }
+
+   eval(f1->fn);
+   if (Compiler::getIdType(f1->fnName) == Value::Type::INT
+         && (m_stack.back().rval < INT16_MIN
+             || m_stack.back().rval > INT16_MAX)) {
+         rerror("Integer overflow in user-call: %f", m_stack.back().rval);
+      }
+   }
 }

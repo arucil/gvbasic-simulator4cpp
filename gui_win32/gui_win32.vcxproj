@@ -118,7 +118,7 @@
     <Manifest Include="1.manifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="c.bmp" />
+    <None Include="m_c.bmp" />
     <None Include="font.bin" />
     <None Include="gvbsim.ico" />
     <None Include="kb.bmp" />
