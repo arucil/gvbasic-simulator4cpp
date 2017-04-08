@@ -27,6 +27,7 @@ void GVB::execute(uint32_t seed) {
    m_funcs.clear();
 
    m_device.setMode(Device::ScreenMode::TEXT);
+   m_device.locate(0, 0);
 
    traverse(m_head);
 }

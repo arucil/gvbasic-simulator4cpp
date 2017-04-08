@@ -32,6 +32,6 @@ set(SOURCE_FILES gvb/lex.h
         gvb/file.cpp
         gvb/igui.h
         gvb/test/device_stub.cpp
-        gvb/test/test_runtime.cpp)
+        gvb/test/test_runtime.cpp gvb/device.cpp)
 
 add_executable(GVBASIC ${SOURCE_FILES})

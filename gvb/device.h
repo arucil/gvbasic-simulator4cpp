@@ -6,6 +6,8 @@
 
 namespace gvbsim {
 
+class IGui;
+
 
 class Device {
 public:
@@ -21,10 +23,17 @@ public:
       COPY, OR, NOT, AND, XOR, DUMMY
    };
 
+private:
+   IGui *m_gui;
+   uint8_t m_x, m_y;
+   ScreenMode m_scrMode;
+
 public:
    Device();
 
 public:
+   void setGui(IGui *);
+
    void appendText(const std::string &);
    void nextRow(); //如果滚屏则屏幕上滚一行
    void updateLCD();
@@ -46,6 +55,10 @@ public:
 
    void sleep(int ticks);
    void paint(uint16_t addr, int x, int y, uint8_t w, uint8_t h, PaintMode);
+
+private:
+   void moveRow();
+   void setPoint(uint8_t, uint8_t, DrawMode);
 };
 
 }
