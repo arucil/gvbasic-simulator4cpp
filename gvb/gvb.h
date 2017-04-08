@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cstdio>
+#include <ctime>
 #include "node_man.h"
 #include "data_man.h"
 #include "random.h"
@@ -31,6 +32,23 @@ class If;
 class On;
 class Print;
 class Locate;
+class Poke;
+class Call;
+class Swap;
+class LRSet;
+class Read;
+class Open;
+class Write;
+class Input;
+class FInput;
+class Field;
+class GetPut;
+class Draw;
+class Line;
+class Box;
+class Circle;
+class Ellipse;
+class XPaint;
 
 
 class GVB {
@@ -47,6 +65,9 @@ class GVB {
             double dest, step;
          } _for;
       };
+
+   public:
+      Loop(Stmt *stmt) : stmt(stmt) { }
    };
 
    struct Sub {
@@ -102,7 +123,7 @@ public:
    void build(std::FILE *fp);
    bool isBuilt() const { return static_cast<bool>(m_head); }
 
-   void execute();
+   void execute(uint32_t seed = static_cast<uint32_t>(std::time(nullptr)));
 
 private:
    void clearEnv();
@@ -121,19 +142,30 @@ private:
    Stmt *exe_if(If *);
    Stmt *exe_on(On *);
    void exe_locate(Locate *);
+   void exe_poke(Poke *);
+   void exe_call(Call *);
+   void exe_swap(Swap *);
+   void exe_read(Read *);
+   void exe_lrset(LRSet *);
+   void exe_open(Open *);
 
    void eval(Expr *);
    void evalPop(Expr *);
-   void eval_id(Id *);
-   void eval_access(ArrayAccess *);
    void eval_func(FuncCall *);
    void eval_binary(Binary *);
    void eval_usercall(UserCall *);
+
+   Single &getValue(Id *);
+
+   void checkIntRange(double r, const char *);
 
 private:
    static void error(int line, int label, const char *s, ...);
 
    static std::string &removeAllOf(std::string &, const char *, size_t);
+
+public:
+   static double str2d(const std::string &); // 不识别inf和nan
 };
 
 }

@@ -49,8 +49,10 @@ void GVB::error(int line, int label, const char *s, ...) {
             int t = va_arg(a, int);
             if (t > 32 && t < 128)
                sout << static_cast<char>(t);
-            else
+            else if (t > Token::TOKEN_FIRST && t < Token::TOKEN_LAST)
                sout << Token::toString(t);
+            else
+               sout << t;
             break;
          }
          case 's': { //string
@@ -97,9 +99,21 @@ string &GVB::removeAllOf(std::string &s, const char *c, size_t n) {
 
    size_t j = 0;
    for (size_t i = 0; i < s.size(); ++i) {
-      if (tab[s[i]])
+      if (!tab[s[i]])
          s[j++] = s[i];
    }
    s.resize(j);
    return s;
+}
+
+double GVB::str2d(const std::string &s) {
+   auto p = s.data();
+   while (' ' == *p)
+      ++p;
+   if ('-' == *p || '+' == *p)
+      ++p;
+   if (!isdigit(*p) && '.' != *p)
+      return 0.;
+
+   return strtod(s.data(), nullptr);
 }

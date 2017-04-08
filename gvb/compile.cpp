@@ -323,6 +323,18 @@ Stmt *Compiler::stmt(bool inIf) { // 可能为null
          return m_nodeMan.make<Poke>(e1, expr(Value::Type::REAL));
       }
 
+      case Token::SWAP: {
+         peek();
+         Id *id1 = getId();
+         match(',');
+         Id *id2 = getId();
+         if (id1->vtype != id2->vtype) {
+            cerror("Incompatible type in SWAP: [%t, %t]",
+                   id1->vtype, id2->vtype);
+         }
+         return m_nodeMan.make<Swap>(id1, id2);
+      }
+
       case Token::RESTORE: {
          peek();
          int label;
@@ -1132,7 +1144,7 @@ Value::Type Compiler::getIdRValType(const std::string &id) {
    return getRValType(getIdType(id));
 }
 
-inline Value::Type Compiler::getRValType(Value::Type type) {
+Value::Type Compiler::getRValType(Value::Type type) {
    return static_cast<Value::Type>(static_cast<int>(type) & Value::RVAL_MASK);
 }
 

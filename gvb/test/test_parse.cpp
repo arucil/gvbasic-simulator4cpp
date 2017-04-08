@@ -16,12 +16,12 @@ void test(FILE *fp, ostream &out) {
    DataManager dm;
    Compiler compiler(fp, nm, dm);
 
-   // try {
+   try {
       printTree(compiler.compile(), cout);
-   // } catch (const Exception &e) {
-   // out << e.label << "(line:" << e.line << ") " << e.msg;
-   //   throw;
-   // }
+   } catch (const Exception &e) {
+      out << e.label << "(line:" << e.line << ") " << e.msg;
+      throw;
+   }
 }
 
 }

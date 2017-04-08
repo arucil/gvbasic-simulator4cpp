@@ -32,9 +32,9 @@ void Device::updateLCD() {
 
 void Device::locate(uint8_t row, uint8_t col) { }
 
-int Device::getX() { return 0; }
+uint8_t Device::getX() { return 1; }
 
-int Device::getY() { return 0; }
+uint8_t Device::getY() { return 0; }
 
 void Device::setMode(ScreenMode mode) { }
 

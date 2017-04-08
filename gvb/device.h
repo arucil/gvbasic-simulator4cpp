@@ -25,8 +25,8 @@ public:
    void nextRow(); //如果滚屏则屏幕上滚一行
    void updateLCD();
    void locate(uint8_t row, uint8_t col);
-   int getX();
-   int getY();
+   uint8_t getX();
+   uint8_t getY();
    void setMode(ScreenMode mode);
    void cls();
    std::string input();

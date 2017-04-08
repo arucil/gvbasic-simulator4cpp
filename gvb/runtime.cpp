@@ -1,7 +1,9 @@
 #include "gvb.h"
-#include <ctime>
 #include <cassert>
 #include <cmath>
+#include <stdexcept>
+#include <cstdlib>
+#include <algorithm>
 #include "compile.h"
 #include "tree.h"
 #include "real.h"
@@ -13,11 +15,11 @@ using namespace gvbsim;
 #define rerror(...)   error(m_line, m_label, __VA_ARGS__)
 
 
-void GVB::execute() {
+void GVB::execute(uint32_t seed) {
    if (!isBuilt())
       return;
 
-   m_rand.setSeed(static_cast<uint32_t>(time(nullptr)));
+   m_rand.setSeed(seed);
    m_dataMan.restore();
    clearEnv();
    clearStack();
@@ -32,11 +34,6 @@ void GVB::execute() {
 void GVB::clearEnv() {
    m_envVar.clear();
    m_envArray.clear();
-
-   // 用于user call
-   m_envVar["_"].vtype = Value::Type::REAL;
-   m_envVar["_%"].vtype = Value::Type::INT;
-   m_envVar["_$"].vtype = Value::Type::STRING;
 }
 
 void GVB::clearStack() {
@@ -171,6 +168,48 @@ void GVB::traverse(Stmt *s) {
          break;
 
       case Stmt::Type::LOCATE:
+         exe_locate(static_cast<Locate *>(s));
+         break;
+
+      case Stmt::Type::POKE:
+         exe_poke(static_cast<Poke *>(s));
+         break;
+
+      case Stmt::Type::CALL:
+         exe_call(static_cast<Call *>(s));
+         break;
+
+      case Stmt::Type::SWAP:
+         exe_swap(static_cast<Swap *>(s));
+         break;
+
+      case Stmt::Type::READ:
+         exe_read(static_cast<Read *>(s));
+         break;
+
+      case Stmt::Type::LSET:
+      case Stmt::Type::RSET:
+         exe_lrset(static_cast<LRSet *>(s));
+         break;
+
+      case Stmt::Type::SLEEP:
+         evalPop(static_cast<XSleep *>(s)->ticks);
+         m_device.sleep(static_cast<int>(m_top.rval));
+         break;
+
+      case Stmt::Type::CLOSE:
+         if (!m_files[static_cast<Close *>(s)->fnum].isOpen()) {
+            rerror("File not open: CLOSE #%i", static_cast<Close *>(s)->fnum + 1);
+         }
+         m_files[static_cast<Close *>(s)->fnum].close();
+         break;
+
+      case Stmt::Type::OPEN:
+         exe_open(static_cast<Open *>(s));
+         break;
+
+      default:
+         assert(0);
       }
 
       s = s->next;
@@ -212,7 +251,7 @@ inline void GVB::exe_dim(Dim *d1) {
       unsigned total = 1;
       for (auto i : ac1->indices) {
          evalPop(i);
-         if (m_top.rval < 0 || m_top.rval > UINT16_MAX) {
+         if (m_top.rval < 0 || m_top.rval >= UINT16_MAX + 1) {
             rerror("Bad index in DIM array: %s, [%f]", m_top.rval);
          }
          unsigned t = static_cast<unsigned>(m_top.rval) + 1;
@@ -220,124 +259,32 @@ inline void GVB::exe_dim(Dim *d1) {
          total *= t;
       }
 
-      switch (a1.vtype = id1->vtype) {
-      case Value::Type::INT:
-         a1.nums.resize(total, 0);
-         break;
-      case Value::Type::REAL:
-         a1.nums.resize(total, 0.0);
-         break;
-      case Value::Type::STRING:
-         a1.strs.resize(total, "");
-         break;
-      default:
-         assert(0);
-      }
+      a1.vals.resize(total);
+      break;
    }
+
    default:
       assert(0);
    }
 }
 
 inline void GVB::exe_assign(Assign *a1) {
-   eval(a1->val);
-   Id *id1 = a1->id;
+   auto &val = getValue(a1->id);
+   evalPop(a1->val);
 
-   if (Expr::Type::ID == id1->type) { // 变量
-      m_top = m_stack.back();
-      m_stack.pop_back();
-
-      auto it = m_envVar.find(id1->id);
-      if (m_envVar.end() == it) { // 变量不存在
-         m_envVar[id1->id].vtype = id1->vtype;
-         it = m_envVar.find(id1->id);
-      }
-
-      switch (id1->vtype) {
-      case Value::Type::INT:
-         if (m_top.rval > INT16_MAX || m_top.rval < INT16_MIN) {
-            rerror("Integer overflow in assignment: %f", m_top.rval);
-         }
-         it->second.ival = static_cast<int>(m_top.rval);
-         break;
-      case Value::Type::REAL:
-         it->second.rval = m_top.rval;
-         break;
-      case Value::Type::STRING:
-         it->second.sval = m_top.sval;
-         break;
-      default:
-         assert(0);
-      }
-   } else { // 数组
-      ArrayAccess *ac1 = static_cast<ArrayAccess *>(id1);
-
-      auto it = m_envArray.find(id1->id);
-      if (m_envArray.end() == it) { // 数组不存在
-         auto &arr1 = m_envArray[id1->id];
-         arr1.bounds.resize(ac1->indices.size(), 11u);
-         unsigned total = 1;
-         for (auto j = ac1->indices.size(); j > 0; --j)
-            total *= 11;
-
-         switch (arr1.vtype = id1->vtype) {
-         case Value::Type::INT:
-            arr1.nums.resize(total, 0);
-            break;
-         case Value::Type::REAL:
-            arr1.nums.resize(total, 0.0);
-            break;
-         case Value::Type::STRING:
-            arr1.strs.resize(total, "");
-            break;
-         default:
-            assert(0);
-         }
-
-         it = m_envArray.find(id1->id);
-      }
-      auto &arr1 = it->second;
-
-      if (ac1->indices.size() != arr1.bounds.size()) {
-         rerror("Array dimension mismatch: expecting %i, got %i",
-                static_cast<int>(arr1.bounds.size()),
-                static_cast<int>(ac1->indices.size()));
-      }
-
-      evalPop(ac1->indices[0]);
-      if (m_top.rval < 0 || m_top.rval >= arr1.bounds[0]) {
-         rerror("Bad index in array: %s 0[%f]", ac1->id, m_top.rval);
-      }
-
-      unsigned total = static_cast<unsigned>(m_top.rval);
-      for (size_t i = 0; i < ac1->indices.size(); ++i) {
-         evalPop(ac1->indices[i]);
-         if (m_top.rval < 0 || m_top.rval >= arr1.bounds[i]) {
-            rerror("Bad index in array: %s %i[%f]", ac1->id,
-                   static_cast<int>(i), m_top.rval);
-         }
-         total = total * arr1.bounds[i] + static_cast<unsigned>(m_top.rval);
-      }
-
-      m_top = m_stack.back();
-      m_stack.pop_back();
-
-      switch (arr1.vtype) {
-      case Value::Type::INT:
-         if (m_top.rval > INT16_MAX || m_top.rval < INT16_MIN) {
-            rerror("Integer overflow in array assignment: %f", m_top.rval);
-         }
-         arr1.nums[total].ival = static_cast<int>(m_top.rval);
-         break;
-      case Value::Type::REAL:
-         arr1.nums[total].rval = m_top.rval;
-         break;
-      case Value::Type::STRING:
-         arr1.strs[total] = m_top.sval;
-         break;
-      default:
-         assert(0);
-      }
+   switch (a1->id->vtype) {
+   case Value::Type::INT:
+      checkIntRange(m_top.rval, "assignment");
+      val.ival = static_cast<int>(m_top.rval);
+      break;
+   case Value::Type::REAL:
+      val.rval = m_top.rval;
+      break;
+   case Value::Type::STRING:
+      val.sval = m_top.sval;
+      break;
+   default:
+      assert(0);
    }
 }
 
@@ -354,18 +301,21 @@ inline void GVB::exe_for(For *f1) {
          }
       } while (i != m_loops.begin());
    }
-   m_loops.push_back(Loop());
+   m_loops.push_back(Loop(f1));
 
    auto &top = m_loops.back();
-   top.stmt = f1;
    top.line = m_line;
    top.label = m_label;
 
    evalPop(f1->dest);
    top._for.dest = m_top.rval;
 
-   evalPop(f1->step);
-   top._for.step = m_top.rval;
+   if (f1->step) {
+      evalPop(f1->step);
+      top._for.step = m_top.rval;
+   } else {
+      top._for.step = 1.0;
+   }
 
    /* for至少会执行一次
     * 如for i = 1 to 0: print i: next
@@ -391,15 +341,12 @@ inline Stmt *GVB::exe_next(Next *n1) {
    // 修改自变量
    double r1; // 修改后的自变量值
    auto &var1 = m_envVar[top._for.stmt->var];
-   switch (var1.vtype) {
-   case Value::Type::INT: {
+   switch (Compiler::getIdType(top._for.stmt->var)) {
+   case Value::Type::INT:
       r1 = var1.ival + top._for.step;
-      if (r1 > INT16_MAX || r1 < INT16_MIN) {
-         rerror("Integer overflow in For: %f", r1);
-      }
+      checkIntRange(r1, "For");
       var1.ival = static_cast<int>(r1);
       break;
-   }
    case Value::Type::REAL:
       r1 = var1.rval += top._for.step; // 不考虑double的溢出
       break;
@@ -410,11 +357,11 @@ inline Stmt *GVB::exe_next(Next *n1) {
    // 判断for结束条件
    if (top._for.step >= 0 ? r1 > top._for.dest : (r1 < top._for.dest)) {
       m_loops.pop_back();
-      m_line = top.line;
-      m_label = top.label;
-      return top.stmt;
+      return n1;
    }
-   return n1;
+   m_line = top.line;
+   m_label = top.label;
+   return top.stmt;
 }
 
 inline Stmt *GVB::exe_while(While *w1) {
@@ -429,7 +376,6 @@ inline Stmt *GVB::exe_while(While *w1) {
          }
       } while (i != m_loops.begin());
    }
-   m_loops.push_back(Loop());
 
    evalPop(w1->cond);
    if (0 == m_top.rval) {
@@ -438,7 +384,6 @@ inline Stmt *GVB::exe_while(While *w1) {
       // 30 while 0
       // 40 goto 20  // 会忽略这里的goto，直接跳到50行的wend之后
       // 50 wend
-      m_loops.pop_back();
       Stmt *s = w1->next;
       int level = 0;
       while (s) {
@@ -453,6 +398,7 @@ inline Stmt *GVB::exe_while(While *w1) {
       }
       return nullptr;
    } else {
+      m_loops.push_back(Loop(w1));
       return w1->next;
    }
 }
@@ -481,19 +427,19 @@ inline void GVB::exe_print(Print *p1) {
             switch (fc1->ftype) {
             case Func::Type::TAB: {
                evalPop(fc1->expr1);
-               if (m_top.rval < 1 || m_top.rval > 20) {
+               if (m_top.rval < 1 || m_top.rval >= 21) {
                   rerror("Illegal argument in PRINT: TAB(%f)", m_top.rval);
                }
                int tab = static_cast<int>(m_top.rval);
                if (m_device.getX() >= tab)
                   m_device.nextRow();
-               m_device.locate(m_device.getY(), tab - 1);
+               m_device.locate(m_device.getY(), static_cast<uint8_t>(tab - 1));
                break;
             }
 
             case Func::Type::SPC:
                evalPop(fc1->expr1);
-               if (m_top.rval < 0 || m_top.rval > UINT8_MAX) {
+               if (m_top.rval < 0 || m_top.rval >= UINT8_MAX + 1) {
                   rerror("Illegal argument in PRINT: SPC(%f)", m_top.rval);
                }
                m_device.appendText(string(static_cast<size_t>(m_top.rval), ' '));
@@ -504,11 +450,12 @@ inline void GVB::exe_print(Print *p1) {
             }
          } else {
             evalPop(i.first);
-            if (m_top.vtype == Value::Type::STRING) {
+            if (i.first->vtype == Value::Type::STRING) {
                m_device.appendText(removeAllOf(m_top.sval, "\x1f\0", 2));
             } else {
                char buf[50];
                sprintf(buf, "%.9G", m_top.rval);
+               m_device.appendText(buf);
             }
          }
       }
@@ -541,9 +488,164 @@ inline Stmt *GVB::exe_on(On *on1) {
          m_subs.push_back(Sub(m_line, m_label, on1->next));
       }
 
-      return on1->addrs[static_cast<size_t>(m_top.rval)].stm;
+      return on1->addrs[static_cast<size_t>(m_top.rval - 1)].stm;
    }
    return on1->next;
+}
+
+inline void GVB::exe_locate(Locate *lc1) {
+   uint8_t row;
+   if (lc1->row) {
+      evalPop(lc1->row);
+      if (m_top.rval < 1 || m_top.rval >= 6) {
+         rerror("Illegal argument in LOCATE: row=%f", m_top.rval);
+      }
+      row = static_cast<uint8_t>(m_top.rval - 1);
+   } else {
+      row = m_device.getY();
+   }
+
+   evalPop(lc1->col);
+   if (m_top.rval < 1 || m_top.rval >= 20) {
+      rerror("Illegal argument in LOCATE: col=%f", m_top.rval);
+   }
+   uint8_t col = static_cast<uint8_t>(m_top.rval - 1);
+   if (nullptr == lc1->row && m_device.getX() > col) {
+      m_device.nextRow();
+   }
+
+   m_device.locate(row, col);
+}
+
+inline void GVB::exe_poke(Poke *p1) {
+   evalPop(p1->addr);
+   if (m_top.rval < 0 || m_top.rval >= UINT16_MAX + 1) {
+      rerror("Illegal address in POKE: %f", m_top.rval);
+   }
+   uint16_t addr = static_cast<uint16_t>(m_top.rval);
+
+   evalPop(p1->val);
+   if (m_top.rval < 0 || m_top.rval >= UINT8_MAX + 1) {
+      rerror("Illegal value in POKE: %f", m_top.rval);
+   }
+   m_device.poke(addr, static_cast<uint8_t>(m_top.rval));
+}
+
+inline void GVB::exe_call(Call *c1) {
+   evalPop(c1->addr);
+   if (m_top.rval < 0 || m_top.rval >= UINT16_MAX + 1) {
+      rerror("Illegal address in CALL: %f", m_top.rval);
+   }
+   m_device.call(static_cast<uint16_t>(m_top.rval));
+}
+
+inline void GVB::exe_swap(Swap *s1) {
+   auto &val1 = getValue(s1->id1);
+   auto &val2 = getValue(s1->id2);
+
+   switch (s1->id1->vtype) {
+   case Value::Type::INT: {
+      int tmp = val1.ival;
+      val1.ival = val2.ival;
+      val2.ival = tmp;
+      break;
+   }
+
+   case Value::Type::REAL: {
+      double tmp = val1.rval;
+      val1.rval = val2.rval;
+      val2.rval = tmp;
+      break;
+   }
+
+   case Value::Type::STRING:
+      val1.sval.swap(val2.sval);
+      break;
+
+   default:
+      assert(0);
+   }
+}
+
+inline void GVB::exe_read(Read *r1) {
+   for (auto i : r1->ids) {
+      if (m_dataMan.reachesEnd()) {
+         rerror("Out of data: %s", i->id);
+      }
+
+      auto &val = getValue(i);
+      switch (i->vtype) {
+      case Value::Type::INT:
+         try {
+            val.ival = stoi(m_dataMan.get());
+            if (val.ival < INT16_MIN || val.ival > INT16_MAX)
+               throw out_of_range("");
+         } catch (invalid_argument &) {
+            val.ival = 0;
+         } catch (out_of_range &) {
+            rerror("Integer overflow in READ");
+         }
+         break;
+
+      case Value::Type::REAL: {
+         double tmp;
+         auto res = RealHelper::validate(tmp = str2d(m_dataMan.get()));
+         assert(res != RealHelper::Result::IS_NAN);
+         if (RealHelper::Result::IS_INF == res) {
+            rerror("Number overflow in READ");
+         }
+         break;
+      }
+
+      case Value::Type::STRING:
+         val.sval = m_dataMan.get();
+         break;
+
+      default:
+         assert(0);
+      }
+
+   }
+}
+
+inline void GVB::exe_lrset(LRSet *lr1) {
+   auto &val = getValue(lr1->id);
+   evalPop(lr1->str);
+
+   auto lsize = val.sval.size(), rsize = m_top.sval.size();
+   if (Stmt::Type::LSET == lr1->type) {
+      if (lsize > rsize) {
+         val.sval.replace(0, rsize, m_top.sval);
+      } else {
+         val.sval.assign(m_top.sval, 0, lsize);
+      }
+   } else {
+      if (lsize > rsize) {
+         val.sval.replace(lsize - rsize, rsize, m_top.sval);
+      } else {
+         val.sval.assign(m_top.sval, rsize - lsize, lsize);
+      }
+   }
+}
+
+inline void GVB::exe_open(Open *o1) {
+   if (m_files[o1->fnum].isOpen()) {
+      rerror("Reopen file #%i", o1->fnum);
+   }
+
+   evalPop(o1->fname);
+
+   string fname = "dat/" + m_top.sval;
+   auto sz = fname.size();
+   if (sz < 8 || (fname.back() | 32) != 't'
+         || (fname[sz - 2] | 32) != 'a' || (fname[sz - 3] | 32) != 'd'
+         || (fname[sz - 4] | 32) != '.') {
+      fname += ".DAT";
+   }
+
+   if (!m_files[o1->fnum].open(fname, o1->mode)) {
+      rerror("File open error: %s", fname);
+   }
 }
 
 inline void GVB::evalPop(Expr *e1) {
@@ -555,10 +657,15 @@ inline void GVB::evalPop(Expr *e1) {
 void GVB::eval(Expr *e1) {
    switch (e1->type) {
    case Expr::Type::ID:
-      return eval_id(static_cast<Id *>(e1));
+   case Expr::Type::ARRAYACCESS: {
+      auto &val = getValue(static_cast<Id *>(e1));
 
-   case Expr::Type::ARRAYACCESS:
-      return eval_access(static_cast<ArrayAccess *>(e1));
+      if (Value::Type::INT == e1->vtype)
+         m_stack.push_back(Single(static_cast<double>(val.ival)));
+      else
+         m_stack.push_back(val);
+      break;
+   }
 
    case Expr::Type::REAL:
       // 编译时确保rval一定有效，不需要再检查
@@ -587,95 +694,46 @@ void GVB::eval(Expr *e1) {
    }
 }
 
-inline void GVB::eval_id(Id *id1) {
-   auto it = m_envVar.find(id1->id);
+// 会占用m_top
+GVB::Single &GVB::getValue(Id *id1) {
+   if (id1->type == Expr::Type::ID) { // 变量
+      return m_envVar[id1->id];
+   } else { // 数组
+      auto ac1 = static_cast<ArrayAccess *>(id1);
+      auto &a1 = m_envArray[id1->id];
 
-   Single *i1;
-   if (m_envVar.end() == it) { // 变量不存在
-      switch (Compiler::getIdType(id1->id)) {
-      case Value::Type::INT:
-         i1 = &(m_envVar[id1->id] = 0);
-         break;
-      case Value::Type::REAL:
-         i1 = &(m_envVar[id1->id] = 0.0);
-         break;
-      case Value::Type::STRING:
-         i1 = &(m_envVar[id1->id] = "");
-         break;
-      default:
-         assert(0);
+      if (a1.bounds.empty()) { // 数组不存在
+         // 初始化数组
+         a1.bounds.resize(ac1->indices.size(), 11u);
+         unsigned total = 1;
+         for (auto j = ac1->indices.size(); j > 0; --j)
+            total *= 11;
+
+         a1.vals.resize(total);
       }
-   } else {
-      i1 = &it->second;
-   }
 
-   if (Value::Type::INT == i1->vtype)
-      m_stack.push_back(Single(static_cast<double>(i1->ival)));
-   else
-      m_stack.push_back(*i1);
-}
-
-inline void GVB::eval_access(ArrayAccess *ac1) {
-   auto it = m_envArray.find(ac1->id);
-   Array *a1;
-
-   if (m_envArray.end() == it) { // 数组不存在
-      a1 = &m_envArray[ac1->id];
-      a1->bounds.resize(ac1->indices.size(), 11u);
-      unsigned total = 1;
-      for (auto j = ac1->indices.size(); j > 0; --j)
-         total *= 11;
-
-      switch (a1->vtype = Compiler::getIdType(ac1->id)) {
-      case Value::Type::INT:
-         a1->nums.resize(total, 0);
-         break;
-      case Value::Type::REAL:
-         a1->nums.resize(total, 0.0);
-         break;
-      case Value::Type::STRING:
-         a1->strs.resize(total, "");
-         break;
-      default:
-         assert(0);
+      if (ac1->indices.size() != a1.bounds.size()) {
+         rerror("Array dimension mismatch: expecting %i, got %i",
+                static_cast<int>(a1.bounds.size()),
+                static_cast<int>(ac1->indices.size()));
       }
-   } else {
-      a1 = &it->second;
-   }
 
-   if (ac1->indices.size() != a1->bounds.size()) {
-      rerror("Array dimension mismatch: expecting %i, got %i",
-             static_cast<int>(a1->bounds.size()),
-             static_cast<int>(ac1->indices.size()));
-   }
-
-   evalPop(ac1->indices[0]);
-   if (m_top.rval < 0 || m_top.rval >= a1->bounds[0]) {
-      rerror("Bad index in array: %s 0[%f]", ac1->id, m_top.rval);
-   }
-
-   unsigned total = static_cast<unsigned>(m_top.rval);
-   for (size_t i = 0; i < ac1->indices.size(); ++i) {
-      evalPop(ac1->indices[i]);
-      if (m_top.rval < 0 || m_top.rval >= a1->bounds[i]) {
-         rerror("Bad index in array: %s %i[%f]", ac1->id,
-                static_cast<int>(i), m_top.rval);
+      evalPop(ac1->indices[0]);
+      if (m_top.rval < 0 || m_top.rval >= a1.bounds[0]) {
+         rerror("Bad index in array: %s 0[%f]", ac1->id, m_top.rval);
       }
-      total = total * a1->bounds[i] + static_cast<unsigned>(m_top.rval);
-   }
 
-   switch (a1->vtype) {
-   case Value::Type::INT:
-      m_stack.push_back(Single(a1->nums[total].ival));
-      break;
-   case Value::Type::REAL:
-      m_stack.push_back(Single(a1->nums[total].rval));
-      break;
-   case Value::Type::STRING:
-      m_stack.push_back(Single(a1->strs[total]));
-      break;
-   default:
-      assert(0);
+      unsigned total = static_cast<unsigned>(m_top.rval);
+      for (size_t i = 1; i < ac1->indices.size(); ++i) {
+         evalPop(ac1->indices[i]);
+         if (m_top.rval < 0 || m_top.rval >= a1.bounds[i]) {
+            rerror("Bad index in array: %s %i[%f]", ac1->id,
+                   static_cast<int>(i), m_top.rval);
+         }
+         total = total * a1.bounds[i] + static_cast<unsigned>(m_top.rval);
+      }
+
+      return a1.vals[total];
    }
 }
 
@@ -685,7 +743,7 @@ inline void GVB::eval_binary(Binary *b1) {
 
    switch (b1->op) {
    case '+':
-      if (Value::Type::REAL == m_top.vtype) {
+      if (Value::Type::REAL == Compiler::getRValType(b1->right->vtype)) {
          auto res = RealHelper::validate(m_stack.back().rval += m_top.rval);
          assert(res != RealHelper::Result::IS_NAN); // 加法会nan ?
          if (RealHelper::Result::IS_INF == res) {
@@ -741,10 +799,9 @@ inline void GVB::eval_binary(Binary *b1) {
    }
 
 #define CMP(op)    \
-   if (Value::Type::REAL == m_top.vtype) { \
+   if (Value::Type::REAL == Compiler::getRValType(b1->right->vtype)) { \
       m_stack.back().rval = m_stack.back().rval op m_top.rval; \
    } else { \
-      m_stack.back().vtype = Value::Type::REAL; \
       m_stack.back().rval = m_stack.back().sval op m_top.sval; \
    } \
    break
@@ -788,7 +845,6 @@ inline void GVB::eval_func(FuncCall *fc) {
       if (m_stack.back().sval.empty()) {
          rerror("Illegal argument is ASC: empty string");
       }
-      m_stack.back().vtype = Value::Type::REAL;
       m_stack.back().rval = m_stack.back().sval[0] & 0xff;
       break;
 
@@ -800,12 +856,11 @@ inline void GVB::eval_func(FuncCall *fc) {
    }
 
    case Func::Type::CHR: {
-      if (m_stack.back().rval < 0 || m_stack.back().rval > 255) {
+      if (m_stack.back().rval < 0 || m_stack.back().rval >= 256) {
          rerror("Illegal argument: CHR$(%f)", m_stack.back().rval);
       }
 
       char c = static_cast<char>(static_cast<unsigned>(m_stack.back().rval));
-      m_stack.back().vtype = Value::Type::STRING;
       m_stack.back().sval.assign(&c, &c + 1);
       break;
    }
@@ -840,18 +895,16 @@ inline void GVB::eval_func(FuncCall *fc) {
                 m_stack.back().sval,
                 static_cast<int>(m_stack.back().sval.size()));
       }
-      m_stack.back().vtype = Value::Type::REAL;
       m_stack.back().rval = *reinterpret_cast<const int16_t *>(
             m_stack.back().sval.data());
       break;
 
    case Func::Type::MKI: { // int => 2-byte
-      if (m_stack.back().rval < INT16_MIN || m_stack.back().rval > INT16_MAX) {
+      if (m_stack.back().rval < INT16_MIN || m_stack.back().rval >= INT16_MAX + 1) {
          rerror("Illegal argument in MKI: %f",
                 m_stack.back().rval);
       }
       int16_t s1 = static_cast<int16_t>(m_stack.back().rval);
-      m_stack.back().vtype = Value::Type::STRING;
       m_stack.back().sval.assign(reinterpret_cast<char *>(&s1),
                                  reinterpret_cast<char *>(&s1) + 2);
       break;
@@ -863,14 +916,12 @@ inline void GVB::eval_func(FuncCall *fc) {
                 m_stack.back().sval,
                 static_cast<int>(m_stack.back().sval.size()));
       }
-      m_stack.back().vtype = Value::Type::REAL;
       m_stack.back().rval = RealHelper::toDouble(
             *reinterpret_cast<const uint64_t *>(m_stack.back().sval.data()));
       break;
 
    case Func::Type::MKS: { // double => 5-byte
       uint64_t d = RealHelper::fromDouble(m_stack.back().rval);
-      m_stack.back().vtype = Value::Type::STRING;
       m_stack.back().sval.assign(reinterpret_cast<char *>(&d),
                                  reinterpret_cast<char *>(&d) + 5);
       break;
@@ -891,7 +942,6 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
 
    case Func::Type::LEN:
-      m_stack.back().vtype = Value::Type::REAL;
       m_stack.back().rval = m_stack.back().sval.size();
       break;
 
@@ -935,7 +985,7 @@ inline void GVB::eval_func(FuncCall *fc) {
    case Func::Type::MID: {
       evalPop(fc->expr2);
       auto &s = m_stack.back().sval;
-      if (m_top.rval < 1 || m_top.rval > s.size()) {
+      if (m_top.rval < 1 || m_top.rval >= s.size() + 1) {
          rerror("Illegal offset in MID: %f, LEN(%s)=%i",
                 m_top.rval, m_stack.back().sval,
                 static_cast<int>(s.size()));
@@ -952,7 +1002,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       }
       --offset;
       unsigned count = static_cast<unsigned>(m_top.rval);
-      if (offset + m_top.rval > s.size())
+      if (offset + m_top.rval >= s.size() + 1)
          count = static_cast<unsigned>(s.size() - offset);
       s = s.substr(offset, count);
       break;
@@ -995,35 +1045,22 @@ inline void GVB::eval_func(FuncCall *fc) {
    case Func::Type::STR: {
       char buf[100];
       sprintf(buf, "%.9G", m_stack.back().rval);
-      m_stack.back().vtype = Value::Type::STRING;
       m_stack.back().sval = buf;
       break;
    }
 
    case Func::Type::VAL: {
-      m_stack.back().vtype = Value::Type::REAL;
-
-      // 检查字符串，防止strtod()识别inf和nan
-      auto p = m_stack.back().sval.data();
-      while (' ' == *p)
-         ++p;
-      if ('-' == *p || '+' == *p)
-         ++p;
-      if ('.' != *p && !isdigit(*p)) {
-         m_stack.back().rval = 0.;
-      } else {
-         auto res = RealHelper::validate(m_stack.back().rval = strtod(
-               m_stack.back().sval.data(), nullptr));
-         assert(res != RealHelper::Result::IS_NAN);
-         if (RealHelper::Result::IS_INF == res) {
-            rerror("Number overflow in VAL");
-         }
+      auto res = RealHelper::validate(m_stack.back().rval = str2d(
+            m_stack.back().sval));
+      assert(res != RealHelper::Result::IS_NAN);
+      if (RealHelper::Result::IS_INF == res) {
+         rerror("Number overflow in VAL");
       }
       break;
    }
 
    case Func::Type::PEEK:
-      if (m_stack.back().rval < 0 || m_stack.back().rval > UINT16_MAX) {
+      if (m_stack.back().rval < 0 || m_stack.back().rval >= UINT16_MAX + 1) {
          rerror("Illegal argument: PEEK(%f)", m_stack.back().rval);
       }
       m_stack.back().rval = m_device.peek(
@@ -1049,7 +1086,7 @@ inline void GVB::eval_func(FuncCall *fc) {
    }
 
    case Func::Type ::LOF: {
-      if (m_stack.back().rval < 1 || m_stack.back().rval > 3) {
+      if (m_stack.back().rval < 1 || m_stack.back().rval >= 4) {
          rerror("Illegal file number: LOF(%f)", m_stack.back().rval);
       }
 
@@ -1086,11 +1123,9 @@ inline void GVB::eval_usercall(UserCall *uc1) {
    evalPop(uc1->expr);
 
    auto &var = m_envVar[f1->varName];
-   switch (var.vtype) {
+   switch (Compiler::getIdType(f1->varName)) {
    case Value::Type::INT:
-      if (m_top.rval < INT16_MIN || m_top.rval > INT16_MAX) {
-         rerror("Integer overflow in user-call: %f", m_top.rval);
-      }
+      checkIntRange(m_top.rval, "User-call");
       var.ival = static_cast<int>(m_top.rval);
       break;
    case Value::Type::REAL:
@@ -1104,10 +1139,13 @@ inline void GVB::eval_usercall(UserCall *uc1) {
    }
 
    eval(f1->fn);
-   if (Compiler::getIdType(f1->fnName) == Value::Type::INT
-         && (m_stack.back().rval < INT16_MIN
-             || m_stack.back().rval > INT16_MAX)) {
-         rerror("Integer overflow in user-call: %f", m_stack.back().rval);
-      }
+   if (Compiler::getIdType(f1->fnName) == Value::Type::INT) {
+      checkIntRange(m_stack.back().rval, "User-call");
+   }
+}
+
+inline void GVB::checkIntRange(double r, const char *s) {
+   if (r < INT16_MIN || r >= INT16_MAX + 1) {
+      rerror("Integer overflow in %S: %f", r, s);
    }
 }
