@@ -28,7 +28,7 @@ namespace gvbsim {
 		bool eof();
 		size_t size();
 		void close();
-		void skipOneByte();
+		void skip(size_t); // 跳过n个字节
 		void seek(long);
 
 		void writeByte(char);
@@ -38,9 +38,10 @@ namespace gvbsim {
 		char readByte();
 		double readReal(); // 返回的double未经过validate
 		std::string readString();
+      std::string readString(size_t); // 读取固定长度的string
 
 	private:
-		void ungetc(char);
+		void ungetc(int);
 		bool readContent(std::string &); // 返回是否有双引号
 
 	public:

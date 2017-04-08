@@ -1,0 +1,16 @@
+0 a$ = "runtime_3.out"
+10 open a$ for output as 1
+20 write 1, "haha", 1.3
+30 write 1, 75.14
+40 close 1
+50 :
+60 open a$ for append as 1
+70 write #1, "abc", 100
+80 close 1
+90 :
+100 open a$ for input as #1
+110 input 1, b$, c, d
+130 print b$, c, d
+140 input 1, b, b$
+150 print b, "'";b$;"'"
+160 close 1

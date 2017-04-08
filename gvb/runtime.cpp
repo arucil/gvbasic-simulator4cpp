@@ -208,6 +208,54 @@ void GVB::traverse(Stmt *s) {
          exe_open(static_cast<Open *>(s));
          break;
 
+      case Stmt::Type::WRITE:
+         exe_write(static_cast<Write *>(s));
+         break;
+
+      case Stmt::Type::FINPUT:
+         exe_finput(static_cast<FInput *>(s));
+         break;
+
+      case Stmt::Type::INPUT:
+         exe_input(static_cast<Input *>(s));
+         break;
+
+      case Stmt::Type::FIELD:
+         exe_field(static_cast<Field *>(s));
+         break;
+
+      case Stmt::Type::GET:
+         exe_get(static_cast<GetPut *>(s));
+         break;
+
+      case Stmt::Type::PUT:
+         exe_put(static_cast<GetPut *>(s));
+         break;
+
+      case Stmt::Type::DRAW:
+         exe_draw(static_cast<Draw *>(s));
+         break;
+
+      case Stmt::Type::LINE:
+         exe_line(static_cast<Line *>(s));
+         break;
+
+      case Stmt::Type::BOX:
+         exe_box(static_cast<Box *>(s));
+         break;
+
+      case Stmt::Type::CIRCLE:
+         exe_circle(static_cast<Circle *>(s));
+         break;
+
+      case Stmt::Type::ELLIPSE:
+         exe_ellipse(static_cast<Ellipse *>(s));
+         break;
+
+      case Stmt::Type::PAINT:
+         exe_paint(static_cast<XPaint *>(s));
+         break;
+
       default:
          assert(0);
       }
@@ -588,8 +636,7 @@ inline void GVB::exe_read(Read *r1) {
          break;
 
       case Value::Type::REAL: {
-         double tmp;
-         auto res = RealHelper::validate(tmp = str2d(m_dataMan.get()));
+         auto res = RealHelper::validate(val.rval = str2d(m_dataMan.get()));
          assert(res != RealHelper::Result::IS_NAN);
          if (RealHelper::Result::IS_INF == res) {
             rerror("Number overflow in READ");
@@ -630,7 +677,7 @@ inline void GVB::exe_lrset(LRSet *lr1) {
 
 inline void GVB::exe_open(Open *o1) {
    if (m_files[o1->fnum].isOpen()) {
-      rerror("Reopen file #%i", o1->fnum);
+      rerror("Reopen file #%i", o1->fnum + 1);
    }
 
    evalPop(o1->fname);
@@ -646,6 +693,305 @@ inline void GVB::exe_open(Open *o1) {
    if (!m_files[o1->fnum].open(fname, o1->mode)) {
       rerror("File open error: %s", fname);
    }
+
+   if (File::Mode::RANDOM == o1->mode) {
+      m_records[o1->fnum].len = o1->len;
+      m_records[o1->fnum].total = Open::NOLEN;
+   }
+}
+
+inline void GVB::exe_write(Write *w1) {
+   auto &file = m_files[w1->fnum];
+   if (!file.isOpen()) {
+      rerror("File not open: WRITE #%i", w1->fnum + 1);
+   }
+
+   if (file.mode() != File::Mode::OUTPUT
+         && file.mode() != File::Mode::APPEND) {
+      rerror("File mode error: WRITE #%i", w1->fnum + 1);
+   }
+
+   for (size_t i = 0, j = w1->exprs.size(); i < j; ++i) {
+      evalPop(w1->exprs[i]);
+      if (w1->exprs[i]->vtype == Value::Type::STRING) {
+         file.writeByte('"');
+         file.writeString(removeAllOf(m_top.sval, "\x31", 1));
+         file.writeByte('"');
+      } else {
+         file.writeReal(m_top.rval);
+      }
+      file.writeByte(i < j - 1 ? ',' : static_cast<char>(0xff));
+   }
+}
+
+inline void GVB::exe_finput(FInput *fi1) {
+   auto &file = m_files[fi1->fnum];
+   if (!file.isOpen()) {
+      rerror("File not open: INPUT #%i", fi1->fnum + 1);
+   }
+
+   if (file.mode() != File::Mode::INPUT) {
+      rerror("File mode error: INPUT #%i", fi1->fnum + 1);
+   }
+
+   for (auto i : fi1->ids) {
+      auto &val = getValue(i);
+      if (file.eof()) {
+         rerror("EOF reached: INPUT #%i", fi1->fnum + 1);
+      }
+
+      switch (i->vtype) {
+      case Value::Type::INT: {
+         double tmp = file.readReal();
+         checkIntRange(tmp, "INPUT");
+         val.ival = static_cast<int>(tmp);
+         break;
+      }
+
+      case Value::Type::REAL: {
+         auto res = RealHelper::validate(val.rval = file.readReal());
+         assert(res != RealHelper::Result::IS_NAN);
+         if (res == RealHelper::Result::IS_INF) {
+            rerror("Number overflow in INPUT");
+         }
+         break;
+      }
+
+      case Value::Type::STRING:
+         val.sval = file.readString();
+         break;
+
+      default:
+         assert(0);
+      }
+
+      file.skip(1); // 跳过','或0xff
+   }
+}
+
+inline void GVB::exe_input(Input *i1) {
+   m_device.appendText(i1->prompt);
+   m_device.updateLCD();
+   for (auto i : i1->ids) {
+      auto &val = getValue(i);
+
+      switch (i->vtype) {
+      case Value::Type::INT:
+         try {
+            val.ival = stoi(m_device.input());
+            if (val.ival < INT16_MIN || val.ival > INT16_MAX)
+               throw out_of_range("");
+         } catch (invalid_argument &) {
+            val.ival = 0;
+         } catch (out_of_range &) {
+            rerror("Integer overflow in INPUT");
+         }
+         break;
+
+      case Value::Type::REAL: {
+         auto res = RealHelper::validate(val.rval = str2d(m_device.input()));
+         assert(res != RealHelper::Result::IS_NAN);
+         if (RealHelper::Result::IS_INF == res) {
+            rerror("Number overflow in INPUT");
+         }
+         break;
+      }
+
+      case Value::Type::STRING:
+         val.sval = m_device.input();
+         break;
+
+      default:
+         assert(0);
+      }
+   }
+}
+
+inline void GVB::exe_field(Field *f1) {
+   auto &file = m_files[f1->fnum];
+   if (!file.isOpen()) {
+      rerror("File not open: FIELD #%i", f1->fnum + 1);
+   }
+
+   if (file.mode() != File::Mode::RANDOM) {
+      rerror("File mode error: FIELD #%i", f1->fnum + 1);
+   }
+
+   auto &rec = m_records[f1->fnum];
+   if (rec.len != Open::NOLEN && rec.len < f1->total) {
+      rerror("Record size overflow: FIELD #%i: %i, LEN=%i",
+             f1->fnum + 1, f1->total, rec.len);
+   }
+
+   rec.fields = f1->fields;
+   rec.total = f1->total;
+   if (rec.len == Open::NOLEN) {
+      rec.len = rec.total;
+   }
+
+   for (auto &i : rec.fields)
+      m_envVar[i.second].sval.assign(static_cast<size_t>(i.first), '\0');
+}
+
+inline void GVB::exe_put(GetPut *gp1) {
+   auto &file = m_files[gp1->fnum];
+   if (!file.isOpen()) {
+      rerror("File not open: PUT #%i", gp1->fnum + 1);
+   }
+
+   if (file.mode() != File::Mode::RANDOM) {
+      rerror("File mode error: PUT #%i", gp1->fnum + 1);
+   }
+
+   auto &rec = m_records[gp1->fnum];
+   if (rec.total == Open::NOLEN) {
+      rerror("Record not assigned: PUT #%i", gp1->fnum + 1);
+   }
+
+   evalPop(gp1->record);
+   int irec;
+   if (m_top.rval < 1 || m_top.rval >= UINT16_MAX
+          || (irec = static_cast<int>(m_top.rval - 1)) * rec.len > file.size()) {
+      rerror("Bad record number: PUT #%i, %f", gp1->fnum + 1, m_top.rval);
+   }
+
+   file.seek(irec * rec.len);
+   for (auto &i : rec.fields) {
+      file.writeString(m_envVar[i.second].sval);
+   }
+
+   if (rec.len > rec.total) {
+      for (int i = rec.len - rec.total; i > 0; --i) {
+         file.writeByte('\0');
+      }
+   }
+}
+
+inline void GVB::exe_get(GetPut *gp1) {
+   auto &file = m_files[gp1->fnum];
+   if (!file.isOpen()) {
+      rerror("File not open: GET #%i", gp1->fnum + 1);
+   }
+
+   if (file.mode() != File::Mode::RANDOM) {
+      rerror("File mode error: GET #%i", gp1->fnum + 1);
+   }
+
+   auto &rec = m_records[gp1->fnum];
+   if (rec.total == Open::NOLEN) {
+      rerror("Record not assigned: GET #%i", gp1->fnum + 1);
+   }
+
+   evalPop(gp1->record);
+   int irec;
+   if (m_top.rval < 1 || m_top.rval >= UINT16_MAX
+       || (irec = static_cast<int>(m_top.rval)) * rec.len > file.size()) {
+      rerror("Bad record number: GET #%i, %f", gp1->fnum + 1, m_top.rval);
+   }
+   --irec;
+
+   file.seek(irec * rec.len);
+   for (auto &i : rec.fields) {
+      m_envVar[i.second].sval = file.readString(static_cast<size_t>(i.first));
+   }
+
+   if (rec.len > rec.total) {
+      file.skip(static_cast<size_t>(rec.len - rec.total));
+   }
+}
+
+inline uint8_t GVB::getCoord(Expr *coord, const char *x, const char *p) {
+   evalPop(coord);
+   if (m_top.rval < 0) {
+      rerror("Illegal %S value in %S: %f", x, p, m_top.rval);
+   }
+   if (m_top.rval >= UINT8_MAX + 1)
+      return UINT8_MAX;
+   return static_cast<uint8_t>(m_top.rval);
+}
+
+inline Device::DrawMode GVB::getDrawMode(Expr *e1) {
+   if (nullptr == e1)
+      return Device::PAINT;
+   evalPop(e1);
+   return static_cast<Device::DrawMode>(static_cast<int>(m_top.rval)
+                                        & Device::DRAW_MASK);
+}
+
+inline bool GVB::getFillType(Expr *e1) {
+   if (nullptr == e1)
+      return false;
+   evalPop(e1);
+   return m_top.rval != 0.;
+}
+
+inline void GVB::exe_draw(Draw *d1) {
+   m_device.point(getCoord(d1->x, "x", "DRAW"),
+                  getCoord(d1->y, "y", "DRAW"),
+                  getDrawMode(d1->ctype));
+}
+
+inline void GVB::exe_line(Line *l1) {
+   m_device.line(getCoord(l1->x1, "x1", "LINE"),
+                 getCoord(l1->y1, "y1", "LINE"),
+                 getCoord(l1->x2, "x2", "LINE"),
+                 getCoord(l1->y2, "y2", "LINE"),
+                 getDrawMode(l1->ctype));
+}
+
+inline void GVB::exe_box(Box *b1) {
+   m_device.rectangle(getCoord(b1->x1, "x1", "BOX"),
+                      getCoord(b1->y1, "y1", "BOX"),
+                      getCoord(b1->x2, "x2", "BOX"),
+                      getCoord(b1->y2, "y2", "BOX"),
+                      getFillType(b1->fill),
+                      getDrawMode(b1->ctype));
+}
+
+inline void GVB::exe_circle(Circle *c1) {
+   auto r = getCoord(c1->radius, "radius", "CIRCLE");
+   m_device.ellipse(getCoord(c1->x, "x", "CIRCLE"),
+                    getCoord(c1->y, "y", "CIRCLE"),
+                    r, r,
+                    getFillType(c1->fill),
+                    getDrawMode(c1->ctype));
+}
+
+inline void GVB::exe_ellipse(Ellipse *c1) {
+   m_device.ellipse(getCoord(c1->x, "x", "ELLIPSE"),
+                    getCoord(c1->y, "y", "ELLIPSE"),
+                    getCoord(c1->rx, "x-radius", "ELLIPSE"),
+                    getCoord(c1->ry, "y-radius", "ELLIPSE"),
+                    getFillType(c1->fill),
+                    getDrawMode(c1->ctype));
+}
+
+inline void GVB::exe_paint(XPaint *p1) {
+   evalPop(p1->addr);
+   uint16_t addr = static_cast<uint16_t>(m_top.rval);
+
+   evalPop(p1->x);
+   int x = static_cast<int>(m_top.rval);
+
+   evalPop(p1->y);
+   int y = static_cast<int>(m_top.rval);
+
+   evalPop(p1->w);
+   uint8_t w = static_cast<uint8_t>(m_top.rval);
+
+   evalPop(p1->h);
+   uint8_t h = static_cast<uint8_t>(m_top.rval);
+
+   Device::PaintMode mode;
+   if (nullptr == p1->mode)
+      mode = Device::PaintMode::COPY;
+   else {
+      evalPop(p1->mode);
+      mode = static_cast<Device::PaintMode>(static_cast<int>(m_top.rval)
+            % static_cast<int>(Device::PaintMode::DUMMY));
+   }
+
+   m_device.paint(addr, x, y, w, h, mode);
 }
 
 inline void GVB::evalPop(Expr *e1) {

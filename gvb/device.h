@@ -14,7 +14,11 @@ public:
    };
 
    enum DrawMode {
-      CLEAR, PAINT, XOR
+      CLEAR, PAINT, XOR, NONE = 3, DRAW_MASK = 3
+   };
+
+   enum class PaintMode { // for PAINT statement only
+      COPY, OR, NOT, AND, XOR, DUMMY
    };
 
 public:
@@ -41,6 +45,7 @@ public:
    void call(uint16_t);
 
    void sleep(int ticks);
+   void paint(uint16_t addr, int x, int y, uint8_t w, uint8_t h, PaintMode);
 };
 
 }

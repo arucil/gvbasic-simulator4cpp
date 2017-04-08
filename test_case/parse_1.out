@@ -1,0 +1,158 @@
+10 (line:1)
+LET A = (1 + NOT(((-(3) * (2 ^ 3)) / 4)))
+LET A$ = (STR$(A) + INKEY$)
+20 (line:2)
+LET B = (FN FOO((A + 3)) * FN BAR%(B))
+LET A$ = (A$[2, 3] + FN F$(("abC" + "_")))
+30 (line:3)
+GOTO 90
+GOSUB 100
+RETURN
+POP
+ON (A + (B * C)) GOTO 30, 40, 100
+ON 1 GOTO 10, 20, 1000
+40 (line:4)
+RESTORE 30
+RESTORE
+END
+POKE (199 + 2), (155 - A)
+PLAY "abc"
+INKEY$
+50 (line:5)
+LET A[2] = A[3, 3, A, B]
+CALL ((A + B) - 3)
+SLEEP (20000 * A)
+60 (line:6)
+FIELD #1, 1 AS A$, 2 AS C$
+CLOSE #1
+GET #1, 3
+PUT #2, (1000 + A)
+70 (line:7)
+LSET A$ = (" " + A$)
+RSET A$ = STR$(1)
+80 (line:8)
+ELLIPSE 1, 2, 3, 4
+ELLIPSE 1, 2, 3, 4, 5
+ELLIPSE 1, 2, 3, 4, 5, 6
+81 (line:9)
+CIRCLE 1, 2, 3
+CIRCLE 1, 2, 3, 4
+CIRCLE 1, 2, 3, 4, 5
+82 (line:10)
+BOX 1, 2, 3, 4
+BOX 1, 2, 3, 4, 5
+BOX 1, 2, 3, 4, 5, 6
+83 (line:11)
+LINE 1, 2, 3, 4
+LINE 1, 2, 3, 4, 5
+84 (line:12)
+DRAW 1, 2
+DRAW 1, 2, 3
+90 (line:13)
+LOCATE 1, 2
+LOCATE , 2
+100 (line:14)
+OPEN A$ FOR INPUT AS #2
+OPEN "" FOR RANDOM AS #1 LEN=3
+OPEN "a" FOR RANDOM AS #3
+110 (line:15)
+READ A, B, C$, D%
+WRITE #1, A, B$
+INPUT #1, A, B$
+INPUT "a"; A
+INPUT A
+120 (line:16)
+WHILE ((((1 + 2) >= 3) AND (A < 3)) OR (C$ = STR$(1)))
+WEND
+130 (line:17)
+LET I% = 1
+FOR I% TO (-(100) - A)
+NEXT J
+NEXT I
+NEXT J
+NEXT K
+NEXT
+LET I = -(100)
+FOR I TO 100 STEP A
+140 (line:18)
+DIM A[2]
+DIM B$[100, 200, (30000 + A)]
+150 (line:19)
+PRINT A$; (B + C); ((A > B) > 2); ((1 OR 3) AND 2), SPC(2); TAB(3), 
+160 (line:20)
+DEF FN FOO(_) = ((_ ^ 2) + 3)
+DEF FN BAR%(_$) = VAL((_$ + MID$(_$, 3)))
+DEF FN BAZ$(_) = MKS$(1)
+170 (line:21)
+LET A = C
+180 (line:22)
+IF 1 THEN
+    LET C = (C + 1)
+    IF (A <> 1) THEN
+        GOTO 30
+    ELSE
+        PRINT 1, 
+        GOTO 30
+    ENDIF
+ENDIF
+190 (line:23)
+IF 1 THEN
+    NONE
+ENDIF
+200 (line:24)
+IF 2 THEN
+    NONE
+ENDIF
+210 (line:25)
+220 (line:26)
+CLS
+LET I = 300
+SLEEP 300
+230 (line:27)
+LET I% = (A + B)
+SLEEP (A + B)
+NEXT J
+PRINT (1 + 1), 
+240 (line:28)
+LET I = -(300)
+SLEEP -(300)
+260 (line:29)
+270 (line:30)
+NEXT J
+LET I = 100
+SLEEP 100
+300 (line:31)
+310 (line:32)
+320 (line:33)
+IF (1 = 1) THEN
+    IF 2 THEN
+        LET I = 30
+        SLEEP 30
+    ELSE
+        LET J = 1
+        FOR J TO 90
+    ENDIF
+ELSE
+    GOTO 1000
+ENDIF
+330 (line:34)
+IF 1 THEN
+    CLS
+    LET I = 100
+    SLEEP 100
+ELSE
+    LET J = 10
+    SLEEP 10
+    CLS
+ENDIF
+340 (line:35)
+PAINT 100, 1, 2, 3, 4
+PAINT 200, 1, 2, 3, 4, 5
+350 (line:36)
+SWAP A, B
+SWAP A%, B%[2, 3]
+SWAP A$[2, 3, 4], B$
+SWAP A[1], B[2]
+999 (line:37)
+1000 (line:38)
+PRINT "abc"; "haha", TAB(A); "kao"; 1, 

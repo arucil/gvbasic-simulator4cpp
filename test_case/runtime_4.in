@@ -1,0 +1,7 @@
+10 open "runtime_4.in" for random as 1 len=5
+20 field 1, 1 as a$, 2 as b$, 2 as c$
+30 get 1, 2
+40 print a$;"-";b$;"-";c$
+50 get 1, 1
+60 print a$;"-";b$;"-";c$
+70 close 1

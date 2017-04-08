@@ -1,0 +1,30 @@
+10 dim a, a(100), a$(2)
+20 a=1: a(100)=2: a(0)=3: print a, a(0), a(100)
+30 a$(0) = "A": a$(1) = "B": a$(2) = "C"
+40 for i = 0 to 2: print a$(i);: next: print: for i = 2 to 0 step -1: print a$(i);: next: print
+50 dim b(3,2,1): b(1,1,1)=c(1,1,1)+3+val(c$(1,1)): print b(1,1,1), c(10,10,10), "'";c$(10,10);"'"
+60 while i < 6: print i: i = i + 2: wend: print i
+70 if i = 7 then print "yes": if i = 6 then 85
+80 goto 90: print "no"
+85 print "he"
+90 print "here":i=10:gosub 1000:gosub 1000:gosub 100
+100 pop:for i = 0 to 4: on i goto 120, 130, 140:
+105 data 1,3,5,7,9
+107 data ,13,15
+110 print "a";
+120 print "b";
+130 print "c";
+140 print "d";
+150 print: next i:on 1 gosub 1000:
+160 def fn f(x)=x^2+1: print fn f(3): def fn f(x)=x*(x*(x+2) + 3) + 1: print fn f(3), fn f(i)
+170 swap a, b(1,1,1): print a, b(1,1,1): swap a$(1), a$(2): print a$(1), a$(2)
+180 a$="---": b$="AA":gosub 1100: b$="BBB": gosub 1100: b$="CCCC": gosub 1100
+190 a$="---": b$="AA":gosub 1200: b$="BBB": gosub 1200: b$="CCCC": gosub 1200
+200 print i:clear:print i
+210 read a,b: print a;b:clear:read a,b,c:print a;b;c:restore:read a,b:print a;b
+220 restore 107: read a,b: print a;b
+990 sleep 30
+999 end
+1000 i=i+1:print i*2:return
+1100 lset a$=b$: print a$: return
+1200 rset a$=b$: print a$: return

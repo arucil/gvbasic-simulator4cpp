@@ -1,0 +1,28 @@
+10 print 2^3^2, "a" + "B" + "-cc"; "$"; spc(2);
+20 print 0/1; 0*0
+30 print 20 > 10; 20 < 10; 20 = 10; 20 <> 10; 20 >= 10; 20 <= 10
+40 print 10 > 10; 10 < 10; 10 = 10; 10 <> 10; 10 >= 10; 10 <= 10
+50 print "a" > "A"; "a" < "A"; "a" = "A"; "a" <> "A"; "a" >= "A"; "a" <= "A"
+60 print "A" > "A"; "A" < "A"; "A" = "A"; "A" <> "A"; "A" >= "A"; "A" <= "A"
+70 print "abc" > "abC"; "abc" >= "abC"; "abc" <> "abC"; "abc" = "abC"
+80 print 1 and 2; 1 and 0; 0 and 1; 1+1 and 1-1
+90 print 1 or 2; 1 or 0; 0 or 1; 1+1 or 1-1
+100 print 1 and 1 or 0 and 0
+200 print -(3+2), not (3+2); not (0/1)
+210 print abs(-100), abs(1+12)
+220 print asc("a"), asc("Ab"), atn(1) * 4, chr$(97) + chr$(48), cos(3)^2 + sin(3)^2, tan(1)
+230 print cvi$("BA"), mki$(16706), mki$(cvi$("BA"))
+235 print "cvs=";cvs$(chr$(162) + chr$(218) + chr$(15) + chr$(73) + chr$(128)), cvs$(mks$(1.57079633))
+240 print exp(1), log(10), log(exp(1))
+250 print "int", int(2.5), int(2), int(0.1), int(-0.1), int(-3), int(-3.1)
+260 print len("int"), len(""), len(mks$(3.1))
+270 print left$("ABCDEFG", 0), left$("ABCDEFG", 2), left$("ABCDEFG", 6), left$("ABCDEFG", 7), left$("ABCDEFG", 100)
+280 print right$("ABCDEFG", 0), right$("ABCDEFG", 2), right$("ABCDEFG", 6), right$("ABCDEFG", 7), right$("ABCDEFG", 100)
+290 print mid$("ABCDEFG", 1), mid$("ABCDEFG", 2, 1), mid$("ABCDEFG", 2, 4), mid$("ABCDEFG", 2, 5), mid$("ABCDEFG", 2, 6)
+300 print mid$("ABCDEFG", 2, 100), mid$("ABCDEFG", 7)
+310 print pos(1)
+320 print rnd(1), rnd(1), rnd(1), rnd(0), rnd(0), rnd(0), rnd(-1), rnd(-1), rnd(-1)
+330 print sgn(100), sgn(0), sgn(-3.4)
+340 print sqr(2), sqr(65536)
+350 print "'" + str$(1.5604) + "'" + str$(-1e38) + "'"
+360 print val("1.2"), val("   -5e3"), val("+3.12e-2"), val("inf"), val("nan"), val("  +e3")

@@ -87,7 +87,7 @@ class GVB {
       std::string sval;
 
    public:
-      Single() { }
+      Single() = default; // 换成 {} 不行?
       Single(int ival) : ival(ival) { }
       Single(double rval) : rval(rval) { }
       Single(const std::string &s) : sval(s) { }
@@ -98,6 +98,13 @@ class GVB {
    struct Array {
       std::vector<unsigned> bounds;
       std::vector<Single> vals;
+   };
+
+   // random文件的记录
+   struct Record {
+      int len; // open语句定义的LEN
+      int total; // field语句定义的len，可能小于上面的len
+      std::vector<std::pair<int, std::string>> fields;
    };
 
 private:
@@ -114,6 +121,7 @@ private:
    NodeManager m_nodeMan;
    DataManager m_dataMan;
    File m_files[3];
+   Record m_records[3];
    int m_line, m_label;
 
 public:
@@ -148,6 +156,18 @@ private:
    void exe_read(Read *);
    void exe_lrset(LRSet *);
    void exe_open(Open *);
+   void exe_write(Write *);
+   void exe_finput(FInput *);
+   void exe_input(Input *);
+   void exe_field(Field *);
+   void exe_put(GetPut *);
+   void exe_get(GetPut *);
+   void exe_draw(Draw *);
+   void exe_line(Line *);
+   void exe_box(Box *);
+   void exe_circle(Circle *);
+   void exe_ellipse(Ellipse *);
+   void exe_paint(XPaint *);
 
    void eval(Expr *);
    void evalPop(Expr *);
@@ -158,6 +178,9 @@ private:
    Single &getValue(Id *);
 
    void checkIntRange(double r, const char *);
+   uint8_t getCoord(Expr *, const char *, const char *);
+   Device::DrawMode getDrawMode(Expr *);
+   bool getFillType(Expr *);
 
 private:
    static void error(int line, int label, const char *s, ...);

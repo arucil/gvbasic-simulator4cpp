@@ -51,7 +51,7 @@ size_t File::size() {
 }
 
 bool File::open(const string &fn, Mode mode) {
-	switch (mode) {
+	switch (m_mode = mode) {
 	case Mode::RANDOM:
 		m_fp = fopen(fn.data(), "rb+");
 		if (!isOpen()) {
@@ -77,12 +77,13 @@ bool File::open(const string &fn, Mode mode) {
 	return isOpen();
 }
 
-void File::ungetc(char c) {
+void File::ungetc(int c) {
 	std::ungetc(c, m_fp);
 }
 
-void File::skipOneByte() {
-	readByte();
+void File::skip(size_t n) {
+	while (n-- > 0)
+      readByte();
 }
 
 void File::seek(long pos) {
@@ -119,7 +120,7 @@ bool File::readContent(string &s) {
 			c = fgetc(m_fp);
 		}
 		if (c != -1)
-			this->ungetc(static_cast<char>(c));
+			this->ungetc(c);
 		return false;
 	}
 }
@@ -128,6 +129,17 @@ string File::readString() {
 	string buf;
 	readContent(buf);
 	return buf;
+}
+
+string File::readString(size_t n) {
+   string s;
+   int c;
+
+   while (n-- > 0 && (c = fgetc(m_fp)) != -1) {
+      s += static_cast<char>(c);
+   }
+
+   return s;
 }
 
 double File::readReal() {

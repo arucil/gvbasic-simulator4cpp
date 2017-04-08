@@ -57,3 +57,6 @@ void Device::poke(uint16_t, uint8_t value) { }
 void Device::call(uint16_t) { }
 
 void Device::sleep(int ticks) { }
+
+void Device::paint(uint16_t addr, int x, int y, uint8_t w, uint8_t h,
+                   PaintMode) { }

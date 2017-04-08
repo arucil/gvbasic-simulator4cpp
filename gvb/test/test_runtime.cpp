@@ -27,7 +27,7 @@ void test(FILE *fp) {
 
 
 int main() {
-   FILE *fp = fopen("test_case/runtime_2.in", "rb");
+   FILE *fp = fopen("test_case/runtime_4.in", "rb");
    assert(fp);
    test(fp);
 }
