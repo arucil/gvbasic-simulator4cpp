@@ -30,6 +30,7 @@ class While;
 class If;
 class On;
 class Print;
+class Locate;
 
 
 class GVB {
@@ -58,7 +59,6 @@ class GVB {
 
    // 单个值
    struct Single {
-      Value::Type vtype;
       union {
          int ival;
          double rval;
@@ -67,27 +67,16 @@ class GVB {
 
    public:
       Single() { }
-      Single(int ival) : vtype(Value::Type::INT), ival(ival) { }
-      Single(double rval) : vtype(Value::Type::REAL), rval(rval) { }
-      Single(const std::string &s) : vtype(Value::Type::STRING), sval(s) { }
-      Single(const char *s) : vtype(Value::Type::STRING), sval(s) { }
+      Single(int ival) : ival(ival) { }
+      Single(double rval) : rval(rval) { }
+      Single(const std::string &s) : sval(s) { }
+      Single(const char *s) : sval(s) { }
    };
 
    // 数组
    struct Array {
-      Value::Type vtype;
-      union Number {
-         int ival;
-         double rval;
-
-         Number(int i) : ival(i) { }
-         Number(double r) : rval(r) { }
-      };
-
-   public:
       std::vector<unsigned> bounds;
-      std::vector<Number> nums;
-      std::vector<std::string> strs;
+      std::vector<Single> vals;
    };
 
 private:
@@ -131,6 +120,7 @@ private:
    void exe_print(Print *);
    Stmt *exe_if(If *);
    Stmt *exe_on(On *);
+   void exe_locate(Locate *);
 
    void eval(Expr *);
    void evalPop(Expr *);

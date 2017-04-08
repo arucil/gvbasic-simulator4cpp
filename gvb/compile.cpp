@@ -938,9 +938,10 @@ enum Precedence {
    PREC_NOT
 };
 
+// 参数必须是REAL或STRING
 inline Expr *Compiler::expr(Value::Type vtype) {
    Expr *e = E_(PREC_NONE);
-   if (e->vtype != vtype) {
+   if (getRValType(e->vtype) != vtype) {
       cerror("Rvalue type error: [%t], expecting [%t]", e->vtype, vtype);
    }
    return e;
@@ -958,20 +959,20 @@ Expr *Compiler::E_(int prev_p) {
       peek();
       Expr *e2 = E_(cur_p);
 
-      if (e1->vtype != e2->vtype) {
+      if (getRValType(e1->vtype) != getRValType(e2->vtype)) {
          cerror("Incompatible operand type in binary: [%t, %t]",
                 e1->vtype, e2->vtype);
       }
       switch (i) {
       case '-': case '*': case '/': case '^': case Token::AND: case Token::OR:
-         if (e1->vtype != Value::Type::REAL) {
+         if (getRValType(e1->vtype) != Value::Type::REAL) {
             cerror("Rvalue type error in binary: [%t], [%t] expected",
                    e1->vtype, Value::Type::REAL);
          }
       default:
          break;
       }
-      e1 = m_nodeMan.make<Binary>(e1, e2, i,'+' == i ? e1->vtype
+      e1 = m_nodeMan.make<Binary>(e1, e2, i, '+' == i ? e1->vtype
                                                      : Value::Type::REAL);
    }
    return e1;
@@ -1008,7 +1009,7 @@ Expr *Compiler::F() {
       int i1 = m_tok;
       peek();
       Expr *e1 = E_(PREC_NEG);
-      if (Value::Type::REAL != e1->vtype) {
+      if (Value::Type::REAL != getRValType(e1->vtype)) {
          cerror("Rvalue type error in unary: [%t], expecting [%t]",
                 e1->vtype, Value::Type::REAL);
       }
@@ -1020,7 +1021,7 @@ Expr *Compiler::F() {
    case Token::NOT: {
       peek();
       Expr *e1 = E_(PREC_NOT);
-      if (Value::Type::REAL != e1->vtype) {
+      if (Value::Type::REAL != getRValType(e1->vtype)) {
          cerror("Rvalue type error in NOT: [%t], expecting [%t]",
                 e1->vtype, Value::Type::REAL);
       }
@@ -1045,7 +1046,7 @@ Expr *Compiler::F() {
       match('(');
       Expr *e1 = expr();
       match(')');
-      return m_nodeMan.make<UserCall>(e1, id, getIdRValType(id));
+      return m_nodeMan.make<UserCall>(e1, id, getIdType(id));
    }
 
    case Token::ID:
@@ -1088,7 +1089,7 @@ inline Expr *Compiler::idexpr() {
 
    // 是id
    Id *id1 = getId();
-   id1->vtype = getRValType(id1->vtype);
+   // id1->vtype = getRValType(id1->vtype);
    return id1;
 }
 
@@ -1127,7 +1128,7 @@ inline const char *Compiler::getTypeSuffix(const std::string &s) {
    }
 }
 
-inline Value::Type Compiler::getIdRValType(const std::string &id) {
+Value::Type Compiler::getIdRValType(const std::string &id) {
    return getRValType(getIdType(id));
 }
 

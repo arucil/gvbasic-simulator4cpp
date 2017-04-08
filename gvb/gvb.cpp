@@ -14,8 +14,6 @@ GVB::GVB() : m_head(nullptr) {
 }
 
 GVB::~GVB() {
-   clearStack();
-   clearEnv();
 }
 
 void GVB::build(std::FILE *fp) {
