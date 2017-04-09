@@ -1,10 +1,14 @@
-#include "mainwindow.h"
+#include "gui_qt.h"
 #include <QApplication>
+#include "readconfig.h"
 
-int main(int argc, char *argv[])
-{
+using namespace gvbsim;
+
+
+int main(int argc, char *argv[]) {
    QApplication a(argc, argv);
-   MainWindow w;
+   
+   GuiQt w;
    w.show();
    
    return a.exec();

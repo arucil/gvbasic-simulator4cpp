@@ -133,6 +133,8 @@ public:
 
    void execute(uint32_t seed = static_cast<uint32_t>(std::time(nullptr)));
 
+   Device &getDevice() { return m_device; }
+
 private:
    void clearEnv();
    void clearStack();

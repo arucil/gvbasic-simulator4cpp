@@ -3,10 +3,14 @@
 
 #include <string>
 #include <cstdint>
+#include <shared_mutex>
 
 namespace gvbsim {
 
 class IGui;
+
+using std::uint8_t;
+using std::uint16_t;
 
 
 class Device {
@@ -23,10 +27,19 @@ public:
       COPY, OR, NOT, AND, XOR, DUMMY
    };
 
+   typedef int Quit;
+
 private:
    IGui *m_gui;
    uint8_t m_x, m_y;
    ScreenMode m_scrMode;
+   uint8_t m_mem[UINT16_MAX];
+   std::shared_timed_mutex m_mutMem;
+   uint8_t *m_memGraph;
+   uint8_t *m_memText;
+   uint8_t *m_memKey;
+   uint8_t *m_memKeyMap;
+   bool m_enableCursor;
 
 public:
    Device();
@@ -50,15 +63,40 @@ public:
    void ellipse(uint8_t x, uint8_t y, uint8_t rx, uint8_t ry, bool fill, DrawMode);
 
    uint8_t peek(uint16_t);
-   void poke(uint16_t, uint8_t value);
+   void poke(uint16_t, uint8_t value); // 可能抛出Quit
    void call(uint16_t);
 
    void sleep(int ticks);
    void paint(uint16_t addr, int x, int y, uint8_t w, uint8_t h, PaintMode);
 
+   void setTextAddr(uint16_t);
+   void setGraphAddr(uint16_t);
+   void setKeyAddr(uint16_t);
+   void setKeyMapAddr(uint16_t);
+
+   uint8_t *getGraphBuffer() { return m_memGraph; }
+
+   static void loadData();
+   static void loadFile(const char *, uint8_t *, size_t n);
+
 private:
    void moveRow();
    void setPoint(uint8_t, uint8_t, DrawMode);
+   void hLine(uint8_t, uint8_t, uint8_t, DrawMode);
+   void ovalPoint(uint8_t, uint8_t, uint8_t, uint8_t, DrawMode);
+
+   static void rollData(void *, int, int);
+
+private:
+   static uint8_t s_dataImage[];
+   static uint8_t s_dataAscii[];
+   static uint8_t s_dataGB16[];
+   static uint8_t s_dataGB12[];
+   static uint8_t s_dataGBChar[];
+   static uint8_t s_dataPY[];
+
+   static const uint8_t s_bitmask[];
+   static const uint8_t s_maskl[], s_maskr[];
 };
 
 }
