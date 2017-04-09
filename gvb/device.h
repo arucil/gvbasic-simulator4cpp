@@ -27,6 +27,10 @@ public:
       COPY, OR, NOT, AND, XOR, DUMMY
    };
 
+   enum class CursorPosInfo {
+      ASCII, GB1st, GB2nd
+   };
+
    typedef int Quit;
 
 private:
@@ -75,6 +79,11 @@ public:
    void setKeyMapAddr(uint16_t);
 
    uint8_t *getGraphBuffer() { return m_memGraph; }
+   ScreenMode getMode() const { return m_scrMode; }
+   CursorPosInfo getPosInfo() const;
+   bool cursorEnabled() const {
+      return ScreenMode::TEXT == m_scrMode && m_enableCursor;
+   }
 
    static void loadData();
    static void loadFile(const char *, uint8_t *, size_t n);

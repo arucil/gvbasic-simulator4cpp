@@ -183,6 +183,23 @@ uint8_t Device::getY() {
    return m_y;
 }
 
+Device::CursorPosInfo Device::getPosInfo() const {
+   uint8_t *j = m_memText + m_y * 20;
+   CursorPosInfo info = CursorPosInfo::ASCII;
+
+   for (int i = 0; i < m_x; ++i) {
+      if (j[i] > 160) {
+         if (info == CursorPosInfo::GB1st)
+            info = CursorPosInfo::GB2nd;
+         else
+            info = CursorPosInfo::GB1st;
+      } else
+         info = CursorPosInfo::ASCII;
+   }
+
+   return info;
+}
+
 void Device::setMode(ScreenMode mode) {
    if (ScreenMode::TEXT == (m_scrMode = mode)) {
       m_gui->m_displayCursor = false;

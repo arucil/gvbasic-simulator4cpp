@@ -8,6 +8,11 @@
 
 
 class Screen;
+class QLabel;
+class QAction;
+namespace std {
+   class thread;
+}
 
 
 class GuiQt : public QMainWindow, public gvbsim::IGui {
@@ -39,9 +44,14 @@ private slots:
    
 private:
    Screen *m_screen;
+   QLabel *m_status;
+   QAction *m_mnuOpen, *m_mnuRun, *m_mnuStop;
    QFileDialog m_fileDlg;
+   bool m_running;
+   std::thread *m_thread;
    
    gvbsim::GVB m_gvb;
+   
 };
 
 

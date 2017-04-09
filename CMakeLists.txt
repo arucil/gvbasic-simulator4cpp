@@ -3,7 +3,8 @@ project(GVBASIC)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(SOURCE_FILES gvb/lex.h
+set(GVB_SOURCE_FILES
+        gvb/lex.h
         gvb/lex.cpp
         gvb/tree.h
         gvb/value.h
@@ -31,7 +32,9 @@ set(SOURCE_FILES gvb/lex.h
         gvb/file.h
         gvb/file.cpp
         gvb/igui.h
-        gvb/test/device_stub.cpp
-        gvb/test/test_runtime.cpp gvb/device.cpp)
+        gvb/test/test_runtime.cpp
+        # gvb/test/device_stub.cpp
+        gvb/device.cpp
+        )
 
-add_executable(GVBASIC ${SOURCE_FILES})
+add_executable(GVBASIC ${GVB_SOURCE_FILES})

@@ -1,15 +1,13 @@
 #ifndef GVBASIC_IGUI_H
 #define GVBASIC_IGUI_H
 
-#include <atomic>
-
 namespace gvbsim {
 
 
 class IGui {
 
 public:
-   std::atomic_bool m_displayCursor;
+   bool m_displayCursor; // should be atomic　??
 
 public:
    virtual ~IGui() { }
@@ -20,6 +18,8 @@ public:
    virtual void update(int x1, int y1, int x2, int y2) = 0;
 
    virtual void sleep(int ticks) = 0;
+
+   void flipCursor() { m_displayCursor = !m_displayCursor; }
 };
 
 }

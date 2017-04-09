@@ -1,14 +1,20 @@
 #include "gui_qt.h"
 #include <QThread>
 #include <cstdlib>
+#include <cstdio>
 #include <QBoxLayout>
 #include <QMenu>
 #include <QMenuBar>
 #include <QApplication>
 #include <QStatusBar>
 #include <QMessageBox>
+#include <QLabel>
+#include <QWidget>
+#include <QStringList>
+#include <thread>
 #include "screen.h"
 #include "readconfig.h"
+#include "../gvb/error.h"
 
 using namespace std;
 using namespace gvbsim;
@@ -19,19 +25,23 @@ GuiQt::GuiQt() : m_fileDlg(this) {
    
    setWindowTitle(tr("GVBASIC Simulator"));
    
-   auto l = new QVBoxLayout(this);
-   m_screen = new Screen(this);
-   l->addWidget(m_screen);
-   l->setAlignment(m_screen, Qt::AlignHCenter);
+   m_screen = new Screen(this, m_gvb.getDevice());
+   
    loadMenu();
    
    loadConfig();
    
-   setFixedSize(350, 166 + menuBar()->geometry().height() + statusBar()->geometry().height());
+   m_screen->move(3, menuBar()->height());
    
    initFileDlg();
    
-   statusBar()->showMessage(tr("ha"));
+   m_status = new QLabel(this);
+   statusBar()->addWidget(m_status);
+   statusBar()->setSizeGripEnabled(false);
+   m_status->setText(tr("haha"));
+   m_status->setFrameStyle(QFrame::Box);
+   
+   setFixedSize(m_screen->width() + 6, m_screen->height() + menuBar()->height() + statusBar()->height());
 }
 
 void GuiQt::loadConfig() {
@@ -59,13 +69,13 @@ void GuiQt::loadConfig() {
 
 void GuiQt::loadMenu() {
    QMenu *m = menuBar()->addMenu(tr("&File"));
-   m->addAction(tr("&Load"), this, &GuiQt::loadFile, QKeySequence(Qt::CTRL, Qt::Key_O));
+   m_mnuOpen = m->addAction(tr("&Load"), this, &GuiQt::loadFile, QKeySequence(Qt::CTRL, Qt::Key_O));
    m->addSeparator();
    m->addAction(tr("&Quit"), qApp, &QApplication::quit, QKeySequence(Qt::ALT, Qt::Key_F4));
    
    m = menuBar()->addMenu(tr("&Program"));
-   m->addAction(tr("&Run"), this, &GuiQt::start, QKeySequence(Qt::Key_F5));
-   m->addAction(tr("&Stop"), this, &GuiQt::stop, QKeySequence(Qt::Key_F6));
+   m_mnuRun = m->addAction(tr("&Run"), this, &GuiQt::start, QKeySequence(Qt::Key_F5));
+   m_mnuStop = m->addAction(tr("&Stop"), this, &GuiQt::stop, QKeySequence(Qt::Key_F6));
    m->addSeparator();
    m->addAction(tr("&Capture Screen"), this, &GuiQt::captureScreen, QKeySequence(Qt::Key_F9));
    
@@ -74,6 +84,9 @@ void GuiQt::loadMenu() {
    m->addSeparator();
    m->addAction(tr("&About"), this, &GuiQt::showAbout);
    m->addAction(tr("&About Qt"), qApp, &QApplication::aboutQt);
+   
+   m_mnuRun->setEnabled(false);
+   m_mnuStop->setEnabled(false);
 }
 
 void GuiQt::initFileDlg() {
@@ -83,10 +96,35 @@ void GuiQt::initFileDlg() {
 
 void GuiQt::loadFile() {
    if (m_fileDlg.exec()) {
+      FILE *fp = fopen(m_fileDlg.selectedFiles().at(0).toStdString().c_str(), "rb");
+      if (nullptr == fp) {
+         m_screen->setError(tr("File open error"));
+         return;
+      }
+      
+      try {
+         m_gvb.build(fp);
+      } catch (Exception &e) {
+         m_screen->setError(QStringLiteral("%1(line:%2): %3").arg(e.label).arg(e.line).arg(QString::fromStdString(e.msg)));
+         return;
+      }
+      
+      fclose(fp);
+      m_screen->setError(QString());
+      m_mnuRun->setEnabled(true);
+      m_status->setText(tr("Ready"));
+      m_running = false;
    }
 }
 
 void GuiQt::start() {
+   if (!m_running) {
+      m_thread = new std::thread([this] {
+         printf("ha\n");
+         fflush(stdout);
+      });
+   } else {
+   }
 }
 
 void GuiQt::stop() {
