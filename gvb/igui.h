@@ -10,6 +10,7 @@ public:
    bool m_displayCursor; // should be atomic　??
 
 public:
+   IGui() : m_displayCursor(false) { }
    virtual ~IGui() { }
 
 public:

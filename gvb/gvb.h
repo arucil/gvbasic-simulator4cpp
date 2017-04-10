@@ -107,9 +107,13 @@ class GVB {
       std::vector<std::pair<int, std::string>> fields;
    };
 
+public:
+   typedef int Quit;
+
 private:
    Device m_device;
    Stmt *m_head;
+   Stmt *m_current;
    std::vector<Single> m_stack;
    Single m_top;
    std::vector<Sub> m_subs;
@@ -132,15 +136,18 @@ public:
    bool isBuilt() const { return static_cast<bool>(m_head); }
 
    void execute(uint32_t seed = static_cast<uint32_t>(std::time(nullptr)));
+   // 返回是否重置成功
+   bool reset(uint32_t seed = static_cast<uint32_t>(std::time(nullptr)));
+   bool step(); // 返回是否可以继续执行
 
-   Device &getDevice() { return m_device; }
+   Device &device() { return m_device; }
 
 private:
    void clearEnv();
    void clearStack();
    void clearFiles();
 
-   void traverse(Stmt *);
+   void traverse();
 
    void exe_dim(Dim *);
    void exe_assign(Assign *);

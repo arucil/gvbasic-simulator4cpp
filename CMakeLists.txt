@@ -33,7 +33,6 @@ set(GVB_SOURCE_FILES
         gvb/file.cpp
         gvb/igui.h
         gvb/test/test_runtime.cpp
-        # gvb/test/device_stub.cpp
         gvb/device.cpp
         )
 

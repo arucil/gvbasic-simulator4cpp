@@ -3,7 +3,7 @@
 
 #include <string>
 #include <cstdint>
-#include <shared_mutex>
+#include <mutex>
 
 namespace gvbsim {
 
@@ -31,18 +31,21 @@ public:
       ASCII, GB1st, GB2nd
    };
 
-   typedef int Quit;
-
 private:
    IGui *m_gui;
    uint8_t m_x, m_y;
    ScreenMode m_scrMode;
    uint8_t m_mem[UINT16_MAX];
-   std::shared_timed_mutex m_mutMem;
+   std::mutex m_mutGraph;
    uint8_t *m_memGraph;
    uint8_t *m_memText;
+   std::mutex m_mutKey; // for memKey & memKeyMap
    uint8_t *m_memKey;
    uint8_t *m_memKeyMap;
+   uint16_t m_addrGraph;
+   uint16_t m_addrText;
+   uint16_t m_addrKey;
+   uint16_t m_addrKeyMap;
    bool m_enableCursor;
 
 public:
@@ -50,6 +53,14 @@ public:
 
 public:
    void setGui(IGui *);
+
+   // called from gui thread
+   void onKeyDown(int key); // wqx key code
+   void onKeyUp(int key);
+   // for painting screen
+   std::mutex &getGraphMutex() {
+      return m_mutGraph;
+   }
 
    void appendText(const std::string &);
    void nextRow(); //如果滚屏则屏幕上滚一行

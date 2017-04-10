@@ -16,8 +16,15 @@ using namespace gvbsim;
 
 
 void GVB::execute(uint32_t seed) {
-   if (!isBuilt())
+   if (!reset(seed))
       return;
+
+   traverse();
+}
+
+bool GVB::reset(uint32_t seed) {
+   if (!isBuilt())
+      return false;
 
    m_rand.setSeed(seed);
    m_dataMan.restore();
@@ -29,8 +36,11 @@ void GVB::execute(uint32_t seed) {
    m_device.setMode(Device::ScreenMode::TEXT);
    m_device.locate(0, 0);
 
-   traverse(m_head);
+   m_current = m_head;
+
+   return true;
 }
+
 
 void GVB::clearEnv() {
    m_envVar.clear();
@@ -49,8 +59,17 @@ void GVB::clearFiles() {
    m_files[2].close();
 }
 
-void GVB::traverse(Stmt *s) {
-   while (s) {
+void GVB::traverse() {
+   while (step()) {
+   }
+}
+
+bool GVB::step() {
+   if (nullptr == m_current)
+      return false;
+
+   Stmt *s = m_current;
+   do {
       switch (s->type) {
       case Stmt::Type::NEWLINE:
          m_line = static_cast<NewLine *>(s)->line;
@@ -260,9 +279,10 @@ void GVB::traverse(Stmt *s) {
       default:
          assert(0);
       }
-
       s = s->next;
-   }
+   } while (false);
+
+   return nullptr != (m_current = s);
 }
 
 inline void GVB::exe_dim(Dim *d1) {

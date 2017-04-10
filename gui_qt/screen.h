@@ -1,46 +1,63 @@
 #ifndef SCREEN_H
 #define SCREEN_H
 
-#include <QFrame>
+#include <QWidget>
 #include <QImage>
+#include <QFileDialog>
 #include <QString>
-#include <cstdint>
+#include "../gvb/gvb.h"
+#include "../gvb/igui.h"
 
 class QPaintEvent;
-namespace gvbsim {
-   class Device;
-}
+class QResizeEvent;
 class GuiQt;
 class QTimer;
 
 
-class Screen : public QFrame {
+class Screen : public QWidget, public gvbsim::IGui {
    Q_OBJECT
    
 public:
-   explicit Screen(GuiQt *parent, gvbsim::Device &);
+   explicit Screen(QWidget *parent);
    
 public:
+   void update();
+   void update(int x1, int y1, int x2, int y2);
+   void sleep(int ticks);
+   
+public:
+   bool loadFile();
+   
+private:
+   void initFileDlg();
+   void startTimer();
+   void stopTimer();
+   void setError(const QString &);
    void setScale(int);
    void setImage(std::uint8_t *, QRgb fg, QRgb bg);
    
-   void setError(const QString &);
-   void startTimer();
-   void stopTimer();
-   
 protected:
-   void paintEvent(QPaintEvent *event);
+   void paintEvent(QPaintEvent *);
+   void resizeEvent(QResizeEvent *);
    
 private slots:
    void blink();
    
+public slots:
+   void start();
+   void stop();
+   void captureScreen();
+   void loadConfig();
+   
 private:
    QImage m_img;
    int m_scale;
-   GuiQt *m_parent;
-   gvbsim::Device &m_device;
    QString m_error;
    QTimer *m_timer;
+   QFileDialog m_fileDlg;
+   int m_sleepFactor;
+   
+   gvbsim::GVB m_gvb;
 };
 
 
