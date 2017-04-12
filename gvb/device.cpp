@@ -30,6 +30,7 @@ void Device::setGui(IGui *gui) {
 
 void Device::init() {
    m_enableCursor = false;
+   m_inputing = false;
    *m_memKey = 0;
    memset(m_memKeyMap, 255, 8);
    setMode(ScreenMode::TEXT);
@@ -491,6 +492,84 @@ void Device::poke(uint16_t addr, uint8_t value) {
 
 void Device::sleep(int ticks) {
    m_gui->sleep(ticks);
+}
+
+void Device::paint(const uint8_t *p, int x, int y, uint8_t w, uint8_t h,
+                   PaintMode mode) {
+   if (x > 159 || y > 79 || x + w < 0 || y + h < 0) {
+      return;
+   }
+
+   int bw = (w + 7) >> 3;
+   //每行开始第一个数据前无用的bit数
+   int unuseDataBits = 0;
+   if (x < 0) {
+      p += (-x) / 8;
+      unuseDataBits = (-x) % 8;
+      w += x;
+      x = 0;
+   }
+   if (y < 0) {
+      p += -bw * y;
+      h += y;
+      y = 0;
+   }
+   if (x + w > 160) {
+      w -= x + w - 160;
+   }
+   if (y + h > 80) {
+      h -= y + h - 80;
+   }
+
+   int h_ = h;
+   //绘制处前无用的bit数
+   int unuseScreenBits = x % 8;
+   //绘制开始地址
+   int offset = 20 * y + x / 8;
+   //实际每行用到数据的byte数
+   int count = (unuseDataBits + w + 7) / 8;
+   //实际绘制影响到的byte数
+   int size = (unuseScreenBits + w + 7) / 8;
+   //绘制结尾剩下的bit数
+   int remain = size * 8 - unuseScreenBits - w;
+   //用于存储图像数据
+   char mapData[22];
+   while (h-- > 0) {
+      for (int i = 0; i < count; i++) {
+         mapData[i] = p[i];
+      }
+      p += bw;
+      rollData(mapData, count + 1, unuseScreenBits - unuseDataBits);
+      for (int i = 0; i < size; i++) {
+         int s = mapData[i], d = m_memGraph[offset + i];
+         int mask = 0;
+         if (i == 0) {
+            mask |= s_maskr[unuseScreenBits];
+         }
+         if (i == size - 1) {
+            mask |= s_maskl[remain];
+         }
+         s &= ~mask;
+         d &= ~mask;
+         m_memGraph[offset + i] &= mask;
+         switch (mode) {
+         case PaintMode::NOT:
+            s ^= ~mask;
+            break;
+         case PaintMode::OR:
+            s |= d;
+            break;
+         case PaintMode::AND:
+            s &= d;
+            break;
+         case PaintMode::XOR:
+            s ^= d;
+         }
+         m_memGraph[offset + i] |= s;
+      }
+      offset += 20;
+   }
+   m_gui->update(x, y, x + w, y + h_);
 }
 
 void Device::paint(uint16_t addr, int x, int y, uint8_t w, uint8_t h,

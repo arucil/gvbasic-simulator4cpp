@@ -5,6 +5,10 @@ namespace gvbsim {
 
 
 class IGui {
+public:
+   enum class InputMethod {
+      EN, CH
+   };
 
 public:
    bool m_displayCursor; // should be atomic　??
@@ -21,6 +25,10 @@ public:
    virtual void sleep(int ticks) = 0;
 
    virtual bool isStopped() = 0;
+
+   virtual void beginInput() = 0;
+   virtual void switchIM(InputMethod) = 0;
+   virtual void endInput() = 0;
 
    void flipCursor() { m_displayCursor = !m_displayCursor; }
 };

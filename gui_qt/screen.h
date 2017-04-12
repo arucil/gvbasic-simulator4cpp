@@ -35,13 +35,18 @@ public:
    };
    
 public:
-   explicit Screen(QLabel *status);
+   explicit Screen(QLabel *status, QLabel *im);
+   ~Screen();
    
 public:
    void update() override;
    void update(int x1, int y1, int x2, int y2) override;
    void sleep(int ticks) override;
    bool isStopped() override;
+   
+   void beginInput() override;
+   void switchIM(InputMethod) override;
+   void endInput() override;
    
 public:
    bool loadFile();
@@ -70,9 +75,6 @@ public slots:
    void captureScreen();
    void loadConfig();
    
-private slots:
-   void onDestroyed();
-   
 signals:
    void stopped();
    
@@ -84,6 +86,7 @@ private:
    QFileDialog m_fileDlg;
    int m_sleepFactor;
    QLabel *m_status;
+   QLabel *m_inputM;
    std::thread m_thread;
    std::mutex m_mutState;
    std::condition_variable m_cv;

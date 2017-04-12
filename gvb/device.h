@@ -45,6 +45,7 @@ private:
    uint8_t *m_memKey;
    uint8_t *m_memKeyMap;
    bool m_enableCursor;
+   bool m_inputing;
 
 public:
    Device();
@@ -108,6 +109,8 @@ private:
    void setPoint(uint8_t, uint8_t, DrawMode);
    void hLine(uint8_t, uint8_t, uint8_t, DrawMode);
    void ovalPoint(uint8_t, uint8_t, uint8_t, uint8_t, DrawMode);
+
+   void paint(const uint8_t *, int x, int y, uint8_t w, uint8_t h, PaintMode);
 
    static void rollData(void *, int, int);
 

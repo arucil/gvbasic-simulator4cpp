@@ -1,5 +1,5 @@
 #include "gui_qt.h"
-#include <QVBoxLayout>
+#include <QBoxLayout>
 #include <QMenu>
 #include <QMenuBar>
 #include <QApplication>
@@ -21,17 +21,20 @@ GuiQt::GuiQt() {
    QWidget *central = new QWidget(this);
    
    auto status = new QLabel(this);
+   auto im = new QLabel(this);
    
-   m_screen = new Screen(status);
+   m_screen = new Screen(status, im);
    
    connect(m_screen, &Screen::stopped, this, &GuiQt::stop, Qt::QueuedConnection);
    
    loadMenu();
    
-   statusBar()->addWidget(status);
+   statusBar()->addWidget(status, 1);
+   statusBar()->addWidget(im);
    statusBar()->setSizeGripEnabled(false);
-   status->setText(tr("haha"));
-   status->setFrameStyle(QFrame::Box);
+   
+   im->setFrameStyle(QFrame::Box);
+   im->hide();
    
    QVBoxLayout *layout = new QVBoxLayout(central);
    layout->addWidget(m_screen, 0, 0);
@@ -43,24 +46,24 @@ GuiQt::GuiQt() {
 }
 
 void GuiQt::loadMenu() {
-   QMenu *m = menuBar()->addMenu(tr("&File"));
-   m_mnuOpen = m->addAction(tr("&Open"), this, &GuiQt::loadFile, QKeySequence::Open);
+   QMenu *m = menuBar()->addMenu(tr("File"));
+   m_mnuOpen = m->addAction(tr("Open"), this, &GuiQt::loadFile, QKeySequence::Open);
    m->addSeparator();
-   m->addAction(tr("&Quit"), qApp, &QApplication::quit, QKeySequence(Qt::ALT, Qt::Key_F4));
+   m->addAction(tr("Quit"), qApp, &QApplication::quit, QKeySequence(Qt::ALT, Qt::Key_F4));
    
-   m = menuBar()->addMenu(tr("&Program"));
+   m = menuBar()->addMenu(tr("Program"));
    m_mnuRun = m->addAction(tr("Run"), this, &GuiQt::run, QKeySequence(Qt::Key_F5));
-   m_mnuStop = m->addAction(tr("&Stop"), this, &GuiQt::stop, QKeySequence(Qt::Key_F6));
+   m_mnuStop = m->addAction(tr("Stop"), this, &GuiQt::stop, QKeySequence(Qt::Key_F6));
    m->addSeparator();
-   m->addAction(tr("&Capture Screen"), m_screen, &Screen::captureScreen, QKeySequence(Qt::Key_F9));
+   m->addAction(tr("Capture Screen"), m_screen, &Screen::captureScreen, QKeySequence(Qt::Key_F9));
    m->addSeparator();
-   m->addAction(tr("&Reload Config"), m_screen, &Screen::loadConfig);
+   m->addAction(tr("Reload Config"), m_screen, &Screen::loadConfig);
    
-   m = menuBar()->addMenu(tr("&Help"));
-   m->addAction(tr("&Content"), this, &GuiQt::showHelp, QKeySequence(Qt::Key_F1));
+   m = menuBar()->addMenu(tr("Help"));
+   m->addAction(tr("Content"), this, &GuiQt::showHelp, QKeySequence(Qt::Key_F1));
    m->addSeparator();
-   m->addAction(tr("&About"), this, &GuiQt::showAbout);
-   m->addAction(tr("&About Qt"), qApp, &QApplication::aboutQt);
+   m->addAction(tr("About"), this, &GuiQt::showAbout);
+   m->addAction(tr("About Qt"), qApp, &QApplication::aboutQt);
    
    m_mnuRun->setEnabled(false);
    m_mnuStop->setEnabled(false);
@@ -75,10 +78,12 @@ void GuiQt::loadFile() {
 
 void GuiQt::keyPressEvent(QKeyEvent *e) {
    m_screen->keyDown(e);
+   QMainWindow::keyPressEvent(e);
 }
 
 void GuiQt::keyReleaseEvent(QKeyEvent *e) {
    m_screen->keyUp(e);
+   QMainWindow::keyReleaseEvent(e);
 }
 
 void GuiQt::run() {

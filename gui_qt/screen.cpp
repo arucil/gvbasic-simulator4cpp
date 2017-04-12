@@ -34,8 +34,9 @@ const unordered_map<int, int> Screen::s_wqxKeyMap {
 #undef k
 
 
-Screen::Screen(QLabel *status)
+Screen::Screen(QLabel *status, QLabel *im)
       : m_status(status),
+        m_inputM(im),
         m_fileDlg(this),
         m_thread(&Screen::threadRun, this) {
    loadConfig();
@@ -154,7 +155,6 @@ void Screen::threadRun() {
             }
             
             if (State::Ready == m_state) {
-               printf("go\n");fflush(stdout);
                continue;
             }
             
@@ -237,12 +237,13 @@ void Screen::keyUp(QKeyEvent *e) {
    }
 }
 
-void Screen::onDestroyed() {
+Screen::~Screen() {
    {
       lock_guard<mutex> lock(m_mutState);
       m_state = State::Quit;
    }
    printf("hehe\n");fflush(stdout);
+   m_cv.notify_one();
    m_thread.join();
 }
 
@@ -307,4 +308,23 @@ void Screen::sleep(int ticks) {
 bool Screen::isStopped() {
    lock_guard<mutex> lock(m_mutState);
    return State::Ready == m_state || State::Quit == m_state;
+}
+
+void Screen::beginInput() {
+   m_inputM->show();
+}
+
+void Screen::switchIM(InputMethod im) {
+   switch (im) {
+   case InputMethod::EN:
+      m_inputM->setText(tr("[EN]"));
+      break;
+   case InputMethod::CH:
+      m_inputM->setText(tr("[CH]"));
+      break;
+   }
+}
+
+void Screen::endInput() {
+   m_inputM->hide();
 }
