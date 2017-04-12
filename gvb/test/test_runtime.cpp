@@ -21,10 +21,10 @@ void test(FILE *fp) {
    GuiStub gui;
 
    gvb.device().setGui(&gui);
-   gvb.device().setGraphAddr(0);
-   gvb.device().setKeyAddr(0);
-   gvb.device().setKeyMapAddr(0);
-   gvb.device().setTextAddr(0);
+   gvb.device().setGraphAddr(6592);
+   gvb.device().setKeyAddr(199);
+   gvb.device().setKeyMapAddr(191);
+   gvb.device().setTextAddr(704);
 
    try {
       gvb.build(fp);
@@ -41,7 +41,7 @@ void test(FILE *fp) {
 
 
 int main() {
-   FILE *fp = fopen("test_case/runtime_4.in", "rb");
+   FILE *fp = fopen("test_case/2.txt", "rb");
    assert(fp);
    test(fp);
 }

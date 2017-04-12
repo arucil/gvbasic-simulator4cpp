@@ -28,6 +28,14 @@ void Device::setGui(IGui *gui) {
    m_gui = gui;
 }
 
+void Device::init() {
+   m_enableCursor = false;
+   *m_memKey = 0;
+   memset(m_memKeyMap, 255, 8);
+   setMode(ScreenMode::TEXT);
+   locate(0, 0);
+}
+
 void Device::loadData() {
    loadFile("res/ascii16.bin", s_dataAscii, sizeof s_dataAscii);
    loadFile("res/image16.bin", s_dataImage, sizeof s_dataImage);
@@ -46,19 +54,19 @@ inline void Device::loadFile(const char *fn, uint8_t *p, size_t n) {
 }
 
 void Device::setGraphAddr(uint16_t addr) {
-   m_memGraph = m_mem + (m_addrGraph = addr);
+   m_memGraph = m_mem + addr;
 }
 
 void Device::setTextAddr(uint16_t addr) {
-   m_memText = m_mem + (m_addrText = addr);
+   m_memText = m_mem + addr;
 }
 
 void Device::setKeyAddr(uint16_t addr) {
-   m_memKey = m_mem + (m_addrKey = addr);
+   m_memKey = m_mem + addr;
 }
 
 void Device::setKeyMapAddr(uint16_t addr) {
-   m_memKeyMap = m_mem + (m_addrKeyMap = addr);
+   m_memKeyMap = m_mem + addr;
 }
 
 void Device::moveRow() {
@@ -123,21 +131,21 @@ void Device::updateLCD() {
       if (m_scrMode == ScreenMode::TEXT) {
          memset(m_memGraph, 0, 1600);
       }
-      uint8_t *c = m_memText, *f, *g, t; //f字库 g屏幕缓冲
-      long ff;
+      uint8_t *c = m_memText, *f, *g; //f字库 g屏幕缓冲
+      int ff;
 
       for (int j = 0; j < 5; j++) {
          for (int i = 0; i < 20; i++) {
             g = j * 320 + i + m_memGraph;
             if (*c > 160) {
-               ff = (*c << 8) | (t = c[1]);
-               if (ff >= 0xf8a1 && ff <= 0xfdd9 && t > 160) { //wqx图形
-                  f = s_dataImage + (((*c - 248) * 94 + t - 161) << 5);
+               ff = (*c << 8) | c[1];
+               if (ff >= 0xf8a1 && ff <= 0xfdd9 && c[1] > 160) { //wqx图形
+                  f = s_dataImage + (((*c - 248) * 94 + (c[1] - 161)) << 5);
                } else {
                   ff = *c - 161;
                   if (ff > 8)
                      ff -= 6;
-                  ff = (ff * 94 + t - 161) << 5;
+                  ff = (ff * 94 + (c[1] - 161)) << 5;
                   if (ff < 0 || ff + 32 > sizeof s_dataGB16) {
                      ff = 85 << 5; //黑方块
                   }
@@ -234,8 +242,13 @@ uint8_t Device::getKey() {
    m_enableCursor = true;
    int a;
    do {
-      lock_guard<mutex> lock(m_mutKey);
-      a = static_cast<int>(*m_memKey) - 128;
+      {
+         lock_guard<mutex> lock(m_mutKey);
+         a = static_cast<int>(*m_memKey) - 128;
+      }
+      if (m_gui->isStopped())
+         throw GVB::Quit();
+      this->sleep(80);
    } while (a < 0);
    m_enableCursor = false;
    m_gui->m_displayCursor = false;
@@ -244,6 +257,20 @@ uint8_t Device::getKey() {
       *m_memKey &= 127;
    }
    return static_cast<uint8_t>(a);
+}
+
+void Device::onKeyDown(int key, char c) {
+   lock_guard<mutex> lock(m_mutKey);
+   *m_memKey = static_cast<uint8_t>(128 + key);
+   if (int m = m_keyMap[key]) {
+      m_memKeyMap[m >> 8] &= ~(m & 255);
+   }
+}
+
+void Device::onKeyUp(int key) {
+   if (int m = m_keyMap[key]) {
+      m_memKeyMap[m >> 8] |= m & 255;
+   }
 }
 
 inline void Device::setPoint(uint8_t x, uint8_t y, DrawMode mode) {
@@ -429,34 +456,36 @@ void Device::ellipse(uint8_t x, uint8_t y, uint8_t rx, uint8_t ry, bool fill,
 }
 
 uint8_t Device::peek(uint16_t addr) {
-   if (m_addrKey == addr || addr >= m_addrKeyMap && addr < m_addrKeyMap + 8) {
+   uint8_t *p = m_mem + addr;
+   if (m_memKey == p) {
       lock_guard<mutex> lock(m_mutKey);
-      return m_mem[addr];
+      return *p;
    }
-   if (addr >= m_addrGraph && addr < m_addrGraph + 1600) {
+   if (p >= m_memGraph && p < m_memGraph + 1600) {
       lock_guard<mutex> lock(m_mutGraph);
-      return m_mem[addr];
+      return *p;
    }
-   return m_mem[addr];
+   return *p;
 }
 
 void Device::poke(uint16_t addr, uint8_t value) {
-   if (m_addrKey == addr || addr >= m_addrKeyMap && addr < m_addrKeyMap + 8) {
+   uint8_t *p = m_mem + addr;
+   if (m_memKey == p) {
       lock_guard<mutex> lock(m_mutKey);
-      m_mem[addr] = value;
-      if (m_addrKey == addr && value == 155)
+      *p = value;
+      if (value == 155)
          throw GVB::Quit();
-   } else if (addr >= m_addrGraph && addr < m_addrGraph + 1600) {
+   } else if (p >= m_memGraph && p < m_memGraph + 1600) {
       {
          lock_guard<mutex> lock(m_mutGraph);
-         m_mem[addr] = value;
+         *p = value;
       }
-      addr -= m_addrGraph;
+      addr -= m_memGraph - m_mem;
       int x = addr % 20;
       int y = addr / 20;
       m_gui->update(x << 3, y, x + 1 << 3, y);
-   } else {
-      m_mem[addr] = value;
+   } else if (p < m_memKeyMap || p >= m_memKeyMap + 8) {
+      *p = value;
    }
 }
 

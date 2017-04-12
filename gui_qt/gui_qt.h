@@ -7,6 +7,7 @@
 class Screen;
 class QLabel;
 class QAction;
+class QKeyEvent;
 
 
 class GuiQt : public QMainWindow {
@@ -16,20 +17,23 @@ public:
    GuiQt();
    ~GuiQt();
    
+protected:
+   void keyPressEvent(QKeyEvent *);
+   void keyReleaseEvent(QKeyEvent *);
    
 private:
-   
    void loadMenu();
    
    
 private slots:
    void loadFile();
+   void run();
+   void stop();
    void showHelp();
    void showAbout();
    
 private:
    Screen *m_screen;
-   QLabel *m_status;
    QAction *m_mnuOpen, *m_mnuRun, *m_mnuStop;
    
 };

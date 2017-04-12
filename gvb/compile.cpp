@@ -1240,15 +1240,16 @@ Ldefault:
 // 汉字加上0x1f前缀
 inline string &Compiler::addCNPrefix(std::string &s) {
    int count = 0;
-   for (size_t i = 0; i < s.size(); ++i) {
+   size_t oldsz = s.size();
+   for (size_t i = 0; i < oldsz; ++i) {
       if (s[i] & 128)
          ++count, ++i;
    }
    if (!count)
       return s;
 
-   s.resize(s.size() + count);
-   for (int i = static_cast<int>(s.size()), j = i + count; --i >= 0; ) {
+   s.resize(oldsz + count);
+   for (int i = static_cast<int>(oldsz), j = i + count; --i >= 0; ) {
       if (s[i] & 128) {
          s[--j] = s[i];
          s[--j] = s[--i];

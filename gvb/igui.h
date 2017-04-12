@@ -20,6 +20,8 @@ public:
 
    virtual void sleep(int ticks) = 0;
 
+   virtual bool isStopped() = 0;
+
    void flipCursor() { m_displayCursor = !m_displayCursor; }
 };
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include <mutex>
+#include <unordered_map>
 
 namespace gvbsim {
 
@@ -33,19 +34,16 @@ public:
 
 private:
    IGui *m_gui;
+   std::unordered_map<int, int> m_keyMap;
    uint8_t m_x, m_y;
    ScreenMode m_scrMode;
    uint8_t m_mem[UINT16_MAX];
    std::mutex m_mutGraph;
    uint8_t *m_memGraph;
    uint8_t *m_memText;
-   std::mutex m_mutKey; // for memKey & memKeyMap
+   std::mutex m_mutKey; // for memKey
    uint8_t *m_memKey;
    uint8_t *m_memKeyMap;
-   uint16_t m_addrGraph;
-   uint16_t m_addrText;
-   uint16_t m_addrKey;
-   uint16_t m_addrKeyMap;
    bool m_enableCursor;
 
 public:
@@ -54,8 +52,14 @@ public:
 public:
    void setGui(IGui *);
 
+   void init();
+
+   void setKeyMap(const std::unordered_map<int, int> &m) {
+      m_keyMap = m;
+   }
+
    // called from gui thread
-   void onKeyDown(int key); // wqx key code
+   void onKeyDown(int key, char c); // wqx key code
    void onKeyUp(int key);
    // for painting screen
    std::mutex &getGraphMutex() {

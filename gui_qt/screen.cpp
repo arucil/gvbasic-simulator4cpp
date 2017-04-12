@@ -1,11 +1,12 @@
 #include "screen.h"
 #include <QPainter>
 #include <QPaintEvent>
-#include <QTimer>
 #include <QStringList>
 #include <QThread>
+#include <QLabel>
 #include <cstdlib>
 #include <cstdio>
+#include <cassert>
 #include <mutex>
 #include "../gvb/device.h"
 #include "../gvb/error.h"
@@ -15,13 +16,34 @@ using namespace gvbsim;
 using namespace std;
 
 
-Screen::Screen(QWidget *parent)
-      : QWidget(parent), m_fileDlg(this) {
-   m_timer = new QTimer(this);
-   connect(m_timer, &QTimer::timeout, this, &Screen::blink);
-   
+#define k(s,r)  { Qt::Key_ ## s, r }
+
+const unordered_map<int, int> Screen::s_wqxKeyMap {
+   k(Escape, 27), k(F1, 28), k(F2, 29), k(F3, 30), k(F4, 31), k(Q, 'q'),
+   k(W, 'w'), k(E, 'e'), k(R, 'r'), k(T, 't'), k(Y, 'y'), k(U, 'u'),
+   k(I, 'i'), k(O, 'o'), k(P, 'p'), k(A, 'a'), k(S, 's'), k(D, 'd'),
+   k(F, 'f'), k(G, 'g'), k(H, 'h'), k(J, 'j'), k(K, 'k'), k(L, 'l'),
+   k(Return, 13), k(Z, 'z'), k(X, 'x'), k(C, 'c'), k(V, 'v'), k(B, 'b'),
+   k(N, 'n'), k(M, 'm'), k(PageUp, 19), k(PageDown, 14), k(Up, 20),
+   k(Down, 21), k(Left, 23), k(Right, 22), k(AsciiTilde, 25), k(Shift, 26),
+   k(Control, 18), k(0, '0'), k(Period, '.'), k(Space, ' '),
+   k(1, 'b'), k(2, 'n'), k(3, 'm'), k(4, 'g'), k(5, 'h'), k(6, 'j'),
+   k(7, 't'), k(8, 'y'), k(9, 'u'),
+};
+
+#undef k
+
+
+Screen::Screen(QLabel *status)
+      : m_status(status),
+        m_fileDlg(this),
+        m_thread(&Screen::threadRun, this) {
    loadConfig();
    initFileDlg();
+   
+   m_gvb.device().setGui(this);
+   
+   connect(this, &Screen::stopped, this, &Screen::stop, Qt::QueuedConnection);
 }
 
 void Screen::loadConfig() {
@@ -37,7 +59,7 @@ void Screen::loadConfig() {
    m_gvb.device().setKeyAddr(static_cast<uint16_t>(
         strtol(dev1["keybuffer"].c_str(), nullptr, 0)));
    m_gvb.device().setKeyMapAddr(static_cast<uint16_t>(
-        strtol(dev1["keybuffer"].c_str(), nullptr, 0)));
+        strtol(dev1["keymap"].c_str(), nullptr, 0)));
    
    auto &gui1 = cr.section("Gui");
    
@@ -47,6 +69,15 @@ void Screen::loadConfig() {
             strtol(gui1["bgcolor"].c_str(), nullptr, 0));
    
    m_sleepFactor = atoi(gui1["sleepfactor"].c_str());
+   
+   unordered_map<int, int> keyMap;
+   auto &keys = cr.section("KeyMap");
+   
+   for (auto &i : keys) {
+      keyMap.insert(make_pair(atoi(i.first.c_str()),
+                              strtol(i.second.c_str(), nullptr, 16)));
+   }
+   m_gvb.device().setKeyMap(keyMap);
 }
 
 void Screen::setScale(int scale) {
@@ -61,16 +92,8 @@ void Screen::setError(const QString &s) {
    QWidget::update();
 }
 
-void Screen::startTimer() {
-   m_timer->start(500);
-}
-
-void Screen::stopTimer() {
-   m_timer->stop();
-}
-
 void Screen::setImage(uint8_t *data, QRgb fg, QRgb bg) {
-   m_img = QImage(data, 160, 80, QImage::Format_MonoLSB);
+   m_img = QImage(data, 160, 80, QImage::Format_Mono);
    m_img.setColor(0, bg | 0xff00'0000);
    m_img.setColor(1, fg | 0xff00'0000);
 }
@@ -97,25 +120,130 @@ bool Screen::loadFile() {
       
       fclose(fp);
       setError(QString());
+      m_status->setText(tr("Ready"));
+      {
+         lock_guard<mutex> lock(m_mutState);
+         m_state = State::Ready;
+      }
       return true;
    }
    return false;
 }
 
-void Screen::start() {
+void Screen::threadRun() {
+   while (true) {
+      {
+         unique_lock<mutex> lock(m_mutState);
+         // waiting for start
+         while (State::Initial == m_state || State::Ready == m_state)
+            m_cv.wait(lock);
+      }
+      
+      // init
+      m_gvb.reset();
+      m_displayCursor = false;
+      m_error.clear();
+      
+      try {
+         do {
+            unique_lock<mutex> lock(m_mutState);
+            
+            if (State::Paused == m_state) {
+               while (State::Paused == m_state)
+                  m_cv.wait(lock);
+            }
+            
+            if (State::Ready == m_state) {
+               printf("go\n");fflush(stdout);
+               continue;
+            }
+            
+            if (State::Quit == m_state)
+               return;
+         } while (m_gvb.step());
+      } catch (Exception &e) {
+         setError(QStringLiteral("%1(line:%2): %3").arg(e.label).arg(e.line).arg(QString::fromStdString(e.msg)));
+      }
+      
+      emit stopped();
+      continue;
+   }
+}
+
+void Screen::clearCursor() {
+   m_displayCursor = false;
+   QWidget::update();
+}
+
+Screen::Result Screen::run() {
+   lock_guard<mutex> lock(m_mutState);
+   switch (m_state) {
+   case State::Ready:
+      m_status->setText(tr("Running"));
+      m_state = State::Running;
+      m_timer.start(500, this);
+      // notify before unlocking may block waiting thread immediately again ?
+      m_cv.notify_one();
+      return Result::Start;
+   case State::Paused:
+      m_status->setText(tr("Running"));
+      m_state = State::Running;
+      return Result::Resume;
+   case State::Running:
+      m_state = State::Paused;
+      m_status->setText(tr("Paused"));
+      clearCursor();
+      return Result::Pause;
+   default:
+      assert(0);
+   }
 }
 
 void Screen::stop() {
+   {
+      lock_guard<mutex> lock(m_mutState);
+      m_state = State::Ready;
+   }
+   m_timer.stop();
+   clearCursor();
+   m_status->setText(tr("Ready"));
 }
 
 void Screen::captureScreen() {
 }
 
-void Screen::blink() {
+void Screen::timerEvent(QTimerEvent *) {
    if (m_gvb.device().cursorEnabled()) {
-      flipCursor();
-      QWidget::update();
+      lock_guard<mutex> lock(m_mutState);
+      if (State::Running == m_state) {
+         flipCursor();
+         QWidget::update();
+      }
    }
+}
+
+void Screen::keyDown(QKeyEvent *e) {
+   auto it = s_wqxKeyMap.find(e->key());
+   if (it != s_wqxKeyMap.end()) {
+      string s = e->text().toStdString();
+      m_gvb.device().onKeyDown(it->second, s.size() ? s[0] : 0);
+   }
+}
+
+void Screen::keyUp(QKeyEvent *e) {
+   auto it = s_wqxKeyMap.find(e->key());
+   if (it != s_wqxKeyMap.end()) {
+      m_gvb.device().onKeyUp(it->second);
+   }
+}
+
+void Screen::onDestroyed() {
+   {
+      lock_guard<mutex> lock(m_mutState);
+      m_state = State::Quit;
+   }
+   printf("hehe\n");fflush(stdout);
+   m_thread.join();
 }
 
 void Screen::paintEvent(QPaintEvent *e) {
@@ -156,7 +284,10 @@ void Screen::paintEvent(QPaintEvent *e) {
 
 void Screen::resizeEvent(QResizeEvent *) {
    qobject_cast<QWidget *>(parent())->adjustSize();
+   // set minimum size
    window()->adjustSize();
+   // disable resizing
+   window()->setMaximumSize(window()->minimumSize());
 }
 
 void Screen::update() {
@@ -171,4 +302,9 @@ void Screen::sleep(int ticks) {
    if (ticks > 0) {
       QThread::usleep(ticks);
    }
+}
+
+bool Screen::isStopped() {
+   lock_guard<mutex> lock(m_mutState);
+   return State::Ready == m_state || State::Quit == m_state;
 }

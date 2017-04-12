@@ -33,10 +33,10 @@ bool GVB::reset(uint32_t seed) {
    clearFiles();
    m_funcs.clear();
 
-   m_device.setMode(Device::ScreenMode::TEXT);
-   m_device.locate(0, 0);
+   m_device.init();
 
    m_current = m_head;
+
 
    return true;
 }
@@ -64,7 +64,7 @@ void GVB::traverse() {
    }
 }
 
-bool GVB::step() {
+bool GVB::step() try {
    if (nullptr == m_current)
       return false;
 
@@ -283,6 +283,9 @@ bool GVB::step() {
    } while (false);
 
    return nullptr != (m_current = s);
+} catch (Quit) {
+   m_current = nullptr;
+   return false;
 }
 
 inline void GVB::exe_dim(Dim *d1) {

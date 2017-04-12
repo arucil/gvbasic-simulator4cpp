@@ -91,15 +91,15 @@ void GVB::error(int line, int label, const char *s, ...) {
 }
 
 string &GVB::removeAllOf(std::string &s, const char *c, size_t n) {
-   bool tab[128];
+   bool tab[256];
    memset(tab, 0, sizeof tab);
 
    while (n-- > 0)
-      tab[*c++] = true;
+      tab[*c++ & 255] = true;
 
    size_t j = 0;
    for (size_t i = 0; i < s.size(); ++i) {
-      if (!tab[s[i]])
+      if (!tab[s[i] & 255])
          s[j++] = s[i];
    }
    s.resize(j);
