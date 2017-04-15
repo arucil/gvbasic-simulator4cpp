@@ -526,8 +526,7 @@ inline void GVB::exe_print(Print *p1) {
                m_device.appendText(removeAllOf(m_top.sval, "\x1f\0", 2));
             } else {
                char buf[50];
-               sprintf(buf, "%.9G", m_top.rval);
-               m_device.appendText(buf);
+               m_device.appendText(buf, sprintf(buf, "%.9G", m_top.rval));
             }
          }
       }
@@ -794,10 +793,18 @@ inline void GVB::exe_finput(FInput *fi1) {
 }
 
 inline void GVB::exe_input(Input *i1) {
-   m_device.appendText(i1->prompt);
-   m_device.updateLCD();
+   bool hasPrompt = i1->prompt.size() > 0;
+
    for (auto i : i1->ids) {
       auto &val = getValue(i);
+
+      if (hasPrompt) {
+         m_device.appendText(i1->prompt);
+         hasPrompt = false;
+      } else {
+         m_device.appendText("?", 1);
+      }
+      m_device.updateLCD();
 
       switch (i->vtype) {
       case Value::Type::INT:

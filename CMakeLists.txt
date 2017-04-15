@@ -24,7 +24,7 @@ set(GVB_SOURCE_FILES
         gvb/data_man.cpp
         gvb/func.h
         gvb/func.cpp
-        # gvb/test/test_parse.cpp
+        gvb/test/test_parse.cpp
         gvb/test/debug.h
         gvb/test/debug.cpp
         gvb/device.h
@@ -32,7 +32,7 @@ set(GVB_SOURCE_FILES
         gvb/file.h
         gvb/file.cpp
         gvb/igui.h
-        gvb/test/test_runtime.cpp
+        # gvb/test/test_runtime.cpp
         gvb/device.cpp
         )
 

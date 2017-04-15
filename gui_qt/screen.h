@@ -7,6 +7,7 @@
 #include <QString>
 #include <QBasicTimer>
 #include <thread>
+#include <atomic>
 #include <mutex>
 #include <condition_variable>
 #include <unordered_map>
@@ -75,21 +76,28 @@ public slots:
    void captureScreen();
    void loadConfig();
    
+private slots:
+   void blink();
+   
 signals:
    void stopped();
+   void showInputMethod();
+   void hideInputMethod();
    
 private:
    QImage m_img;
    int m_scale;
    QString m_error;
-   QBasicTimer m_timer;
+   QBasicTimer m_timerUpdate;
+   QTimer *m_timerBlink;
    QFileDialog m_fileDlg;
    int m_sleepFactor;
    QLabel *m_status;
-   QLabel *m_inputM;
+   QLabel *m_im;
    std::thread m_thread;
    std::mutex m_mutState;
    std::condition_variable m_cv;
+   std::atomic_int m_needUpdate;
    State m_state = State::Initial;
    
    gvbsim::GVB m_gvb;

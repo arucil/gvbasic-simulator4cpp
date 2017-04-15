@@ -69,12 +69,6 @@ bool Lexer::peek(int ch) {
    return true;
 }
 
-int Lexer::getc() {
-   int d = m_c;
-   peek();
-   return d;
-}
-
 void Lexer::skipSpace() {
    while (' ' == m_c)
       peek();

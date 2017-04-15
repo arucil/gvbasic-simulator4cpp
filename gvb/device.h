@@ -45,7 +45,7 @@ private:
    uint8_t *m_memKey;
    uint8_t *m_memKeyMap;
    bool m_enableCursor;
-   bool m_inputing;
+   char m_tmpchar;
 
 public:
    Device();
@@ -67,7 +67,10 @@ public:
       return m_mutGraph;
    }
 
-   void appendText(const std::string &);
+   void appendText(const std::string &s) {
+      appendText(s.data(), static_cast<int>(s.size()));
+   }
+   void appendText(const char *, int size);
    void nextRow(); //如果滚屏则屏幕上滚一行
    void updateLCD();
    void locate(uint8_t row, uint8_t col);
@@ -87,7 +90,10 @@ public:
    void call(uint16_t);
 
    void sleep(int ticks);
-   void paint(uint16_t addr, int x, int y, uint8_t w, uint8_t h, PaintMode);
+   void paint(const uint8_t *, int x, int y, uint8_t w, uint8_t h, PaintMode);
+   void paint(uint16_t addr, int x, int y, uint8_t w, uint8_t h, PaintMode mode) {
+      paint(m_mem + addr, x, y, w, h, mode);
+   }
 
    void setTextAddr(uint16_t);
    void setGraphAddr(uint16_t);
@@ -110,15 +116,19 @@ private:
    void hLine(uint8_t, uint8_t, uint8_t, DrawMode);
    void ovalPoint(uint8_t, uint8_t, uint8_t, uint8_t, DrawMode);
 
-   void paint(const uint8_t *, int x, int y, uint8_t w, uint8_t h, PaintMode);
+   void tinyTextOut(const uint8_t *, int size, int x, int y);
+   void drawChar12(const uint8_t *, int x, int y);
 
    static void rollData(void *, int, int);
+   static void py2GB(uint8_t *, int size, const uint8_t *&list, int &len);
 
 private:
    static uint8_t s_dataImage[];
-   static uint8_t s_dataAscii[];
+   static uint8_t s_dataAscii16[];
    static uint8_t s_dataGB16[];
+   static uint8_t s_dataAscii12[];
    static uint8_t s_dataGB12[];
+   static uint8_t s_dataAscii8[];
    static uint8_t s_dataGBChar[];
    static uint8_t s_dataPY[];
 

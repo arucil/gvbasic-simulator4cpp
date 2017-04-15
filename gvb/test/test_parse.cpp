@@ -29,7 +29,7 @@ void test(FILE *fp, ostream &out) {
 #if 1
 
 int main() {
-   FILE *fp = fopen("test_case/CASTLE.in", "rb");
+   FILE *fp = fopen("test_case/3d.in", "rb");
    assert(fp);
    test(fp, cout);
 }

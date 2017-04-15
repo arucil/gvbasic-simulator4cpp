@@ -4,6 +4,8 @@
 #include <QStringList>
 #include <QThread>
 #include <QLabel>
+#include <QTimer>
+#include <QDateTime>
 #include <cstdlib>
 #include <cstdio>
 #include <cassert>
@@ -25,10 +27,11 @@ const unordered_map<int, int> Screen::s_wqxKeyMap {
    k(F, 'f'), k(G, 'g'), k(H, 'h'), k(J, 'j'), k(K, 'k'), k(L, 'l'),
    k(Return, 13), k(Z, 'z'), k(X, 'x'), k(C, 'c'), k(V, 'v'), k(B, 'b'),
    k(N, 'n'), k(M, 'm'), k(PageUp, 19), k(PageDown, 14), k(Up, 20),
-   k(Down, 21), k(Left, 23), k(Right, 22), k(AsciiTilde, 25), k(Shift, 26),
+   k(Down, 21), k(Left, 23), k(Right, 22), k(QuoteLeft, 25), k(Shift, 26),
    k(Control, 18), k(0, '0'), k(Period, '.'), k(Space, ' '),
    k(1, 'b'), k(2, 'n'), k(3, 'm'), k(4, 'g'), k(5, 'h'), k(6, 'j'),
    k(7, 't'), k(8, 'y'), k(9, 'u'),
+   k(Backspace, 29)
 };
 
 #undef k
@@ -36,15 +39,23 @@ const unordered_map<int, int> Screen::s_wqxKeyMap {
 
 Screen::Screen(QLabel *status, QLabel *im)
       : m_status(status),
-        m_inputM(im),
-        m_fileDlg(this),
-        m_thread(&Screen::threadRun, this) {
+        m_im(im),
+        m_fileDlg(this) {
    loadConfig();
    initFileDlg();
    
    m_gvb.device().setGui(this);
    
    connect(this, &Screen::stopped, this, &Screen::stop, Qt::QueuedConnection);
+   connect(this, &Screen::showInputMethod, m_im, &QLabel::show, Qt::QueuedConnection);
+   connect(this, &Screen::hideInputMethod, m_im, &QLabel::hide, Qt::QueuedConnection);
+   
+   m_timerBlink = new QTimer(this);
+   connect(m_timerBlink, &QTimer::timeout, this, &Screen::blink);
+   
+   m_timerUpdate.start(20, this); // 50 hz
+   
+   m_thread = std::thread(&Screen::threadRun, this);
 }
 
 void Screen::loadConfig() {
@@ -90,7 +101,7 @@ void Screen::setScale(int scale) {
 
 void Screen::setError(const QString &s) {
    m_error = s;
-   QWidget::update();
+   update();
 }
 
 void Screen::setImage(uint8_t *data, QRgb fg, QRgb bg) {
@@ -155,7 +166,7 @@ void Screen::threadRun() {
             }
             
             if (State::Ready == m_state) {
-               continue;
+               goto L1;
             }
             
             if (State::Quit == m_state)
@@ -166,6 +177,12 @@ void Screen::threadRun() {
       }
       
       emit stopped();
+      
+L1:
+      // prevent from skipping the wait for start
+      while (State::Ready != m_state) {
+         QThread::msleep(50);
+      }
       continue;
    }
 }
@@ -181,13 +198,14 @@ Screen::Result Screen::run() {
    case State::Ready:
       m_status->setText(tr("Running"));
       m_state = State::Running;
-      m_timer.start(500, this);
+      m_timerBlink->start(500);
       // notify before unlocking may block waiting thread immediately again ?
       m_cv.notify_one();
       return Result::Start;
    case State::Paused:
       m_status->setText(tr("Running"));
       m_state = State::Running;
+      m_cv.notify_one();
       return Result::Resume;
    case State::Running:
       m_state = State::Paused;
@@ -204,15 +222,48 @@ void Screen::stop() {
       lock_guard<mutex> lock(m_mutState);
       m_state = State::Ready;
    }
-   m_timer.stop();
+   m_timerBlink->stop();
    clearCursor();
    m_status->setText(tr("Ready"));
 }
 
 void Screen::captureScreen() {
+   static const uint8_t BMP_HEADER[62] = {
+      0x42, 0x4D, 0x7E, 0x06, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x3E, 0x00, 0x00, 0x00, 0x28, 0x00, 
+      0x00, 0x00, 0xA0, 0x00, 0x00, 0x00, 0x50, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 
+      0x00, 0x00, 0x40, 0x06, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF,
+      0xFF, 0x00, 0x00, 0x00, 0x00, 0x00
+   };
+   
+   auto datetime = QDateTime::currentDateTime().toLocalTime();
+   auto date = datetime.date();
+   auto time = datetime.time();
+   
+   char buf[1024];
+   sprintf(buf, "%04d_%02d_%02d-%02d.%02d.%02d.%03d.bmp",
+           date.year(), date.month(), date.day(),
+           time.hour(), time.minute(), time.second(), time.msec());
+   
+   FILE *fp = fopen(buf, "wb");
+   fwrite(BMP_HEADER, sizeof (BMP_HEADER), 1, fp);
+   
+   const uint8_t *p = m_gvb.device().getGraphBuffer();
+   {
+      lock_guard<mutex> lock(m_gvb.device().getGraphMutex());
+      for (int i = 79; i >= 0; --i) {
+         fwrite(p + i * 20, 20, 1, fp);
+      }
+   }
+   fclose(fp);
+   
+   m_status->setText(tr("Saved screenshot as %1").arg(tr(buf)));
 }
 
-void Screen::timerEvent(QTimerEvent *) {
+void Screen::blink() {
    if (m_gvb.device().cursorEnabled()) {
       lock_guard<mutex> lock(m_mutState);
       if (State::Running == m_state) {
@@ -224,9 +275,24 @@ void Screen::timerEvent(QTimerEvent *) {
 
 void Screen::keyDown(QKeyEvent *e) {
    auto it = s_wqxKeyMap.find(e->key());
+   
+   int key;
    if (it != s_wqxKeyMap.end()) {
-      string s = e->text().toStdString();
-      m_gvb.device().onKeyDown(it->second, s.size() ? s[0] : 0);
+      key = it->second;
+   } else {
+      key = 127;
+   }
+   
+   char c;
+   string s = e->text().toStdString();
+   if (s.size()) {
+      c = s[0];
+   } else {
+      c = 0;
+   }
+   
+   if (key || c) {
+      m_gvb.device().onKeyDown(key, c);
    }
 }
 
@@ -242,7 +308,6 @@ Screen::~Screen() {
       lock_guard<mutex> lock(m_mutState);
       m_state = State::Quit;
    }
-   printf("hehe\n");fflush(stdout);
    m_cv.notify_one();
    m_thread.join();
 }
@@ -291,12 +356,20 @@ void Screen::resizeEvent(QResizeEvent *) {
    window()->setMaximumSize(window()->minimumSize());
 }
 
+void Screen::timerEvent(QTimerEvent *) {
+   if (m_needUpdate.fetch_and(0)) {
+      QWidget::update();
+   }
+}
+
 void Screen::update() {
-   QWidget::update();
+   // QWidget::update();
+   m_needUpdate = 1;
 }
 
 void Screen::update(int x1, int y1, int x2, int y2) {
-   QWidget::update(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+   // QWidget::update(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+   m_needUpdate = 1;
 }
 
 void Screen::sleep(int ticks) {
@@ -306,25 +379,31 @@ void Screen::sleep(int ticks) {
 }
 
 bool Screen::isStopped() {
-   lock_guard<mutex> lock(m_mutState);
+   unique_lock<mutex> lock(m_mutState);
+   
+   if (State::Paused == m_state) {
+      while (State::Paused == m_state)
+         m_cv.wait(lock);
+   }
+   
    return State::Ready == m_state || State::Quit == m_state;
 }
 
 void Screen::beginInput() {
-   m_inputM->show();
+   emit showInputMethod();
 }
 
 void Screen::switchIM(InputMethod im) {
    switch (im) {
    case InputMethod::EN:
-      m_inputM->setText(tr("[EN]"));
+      m_im->setText(tr("[EN]"));
       break;
    case InputMethod::CH:
-      m_inputM->setText(tr("[CH]"));
+      m_im->setText(tr("[CH]"));
       break;
    }
 }
 
 void Screen::endInput() {
-   m_inputM->hide();
+   emit hideInputMethod();
 }
