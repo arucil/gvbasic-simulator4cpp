@@ -18,6 +18,7 @@ void NodeManager::clear() {
       p = p->node.next;
       delete t;
    }
+   head->node.prev = head->node.next = head;
 }
 
 void NodeManager::destroy(Node *p) {

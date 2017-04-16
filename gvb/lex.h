@@ -32,6 +32,7 @@ public:
    std::string sval;
 
 public:
+   int getc();
    void skipSpace();
    int getToken();
 

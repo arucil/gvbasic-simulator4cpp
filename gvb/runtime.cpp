@@ -323,7 +323,7 @@ inline void GVB::exe_dim(Dim *d1) {
       unsigned total = 1;
       for (auto i : ac1->indices) {
          evalPop(i);
-         if (m_top.rval < 0 || m_top.rval >= UINT16_MAX + 1) {
+         if (!inRangeCO(m_top.rval, 0, UINT16_MAX + 1)) {
             rerror("Bad index in DIM array: %s, [%f]", m_top.rval);
          }
          unsigned t = static_cast<unsigned>(m_top.rval) + 1;
@@ -450,7 +450,7 @@ inline Stmt *GVB::exe_while(While *w1) {
    }
 
    evalPop(w1->cond);
-   if (0 == m_top.rval) {
+   if (isZero(m_top.rval)) {
       // 查找对应的wend。
       // 直接顺序查找，忽略while和wend之间的goto：
       // 30 while 0
@@ -499,7 +499,7 @@ inline void GVB::exe_print(Print *p1) {
             switch (fc1->ftype) {
             case Func::Type::TAB: {
                evalPop(fc1->expr1);
-               if (m_top.rval < 1 || m_top.rval >= 21) {
+               if (!inRangeCO(m_top.rval, 1, 21)) {
                   rerror("Illegal argument in PRINT: TAB(%f)", m_top.rval);
                }
                int tab = static_cast<int>(m_top.rval);
@@ -511,7 +511,7 @@ inline void GVB::exe_print(Print *p1) {
 
             case Func::Type::SPC:
                evalPop(fc1->expr1);
-               if (m_top.rval < 0 || m_top.rval >= UINT8_MAX + 1) {
+               if (!inRangeCO(m_top.rval, 0, UINT8_MAX + 1)) {
                   rerror("Illegal argument in PRINT: SPC(%f)", m_top.rval);
                }
                m_device.appendText(string(static_cast<size_t>(m_top.rval), ' '));
@@ -542,7 +542,7 @@ inline void GVB::exe_print(Print *p1) {
 
 inline Stmt *GVB::exe_if(If *if1) {
    evalPop(if1->cond);
-   if (0. != m_top.rval)
+   if (!isZero(m_top.rval))
       return if1->stmThen;
    else if (if1->stmElse)
       return if1->stmElse;
@@ -551,7 +551,7 @@ inline Stmt *GVB::exe_if(If *if1) {
 
 inline Stmt *GVB::exe_on(On *on1) {
    evalPop(on1->cond);
-   if (m_top.rval >= 1 && m_top.rval <= on1->addrs.size()) {
+   if (inRangeCO(m_top.rval, 1, on1->addrs.size() + 1)) {
       if (on1->isSub) {
          if (m_subs.size() >= UINT16_MAX) {
             rerror("Stack overflow in ON-GOSUB");
@@ -568,7 +568,7 @@ inline void GVB::exe_locate(Locate *lc1) {
    uint8_t row;
    if (lc1->row) {
       evalPop(lc1->row);
-      if (m_top.rval < 1 || m_top.rval >= 6) {
+      if (!inRangeCO(m_top.rval, 1, 6)) {
          rerror("Illegal argument in LOCATE: row=%f", m_top.rval);
       }
       row = static_cast<uint8_t>(m_top.rval - 1);
@@ -577,7 +577,7 @@ inline void GVB::exe_locate(Locate *lc1) {
    }
 
    evalPop(lc1->col);
-   if (m_top.rval < 1 || m_top.rval >= 20) {
+   if (!inRangeCO(m_top.rval, 1, 21)) {
       rerror("Illegal argument in LOCATE: col=%f", m_top.rval);
    }
    uint8_t col = static_cast<uint8_t>(m_top.rval - 1);
@@ -590,13 +590,13 @@ inline void GVB::exe_locate(Locate *lc1) {
 
 inline void GVB::exe_poke(Poke *p1) {
    evalPop(p1->addr);
-   if (m_top.rval < 0 || m_top.rval >= UINT16_MAX + 1) {
+   if (!inRangeCO(m_top.rval, 0, UINT16_MAX + 1)) {
       rerror("Illegal address in POKE: %f", m_top.rval);
    }
    uint16_t addr = static_cast<uint16_t>(m_top.rval);
 
    evalPop(p1->val);
-   if (m_top.rval < 0 || m_top.rval >= UINT8_MAX + 1) {
+   if (!inRangeCO(m_top.rval, 0, UINT8_MAX + 1)) {
       rerror("Illegal value in POKE: %f", m_top.rval);
    }
    m_device.poke(addr, static_cast<uint8_t>(m_top.rval));
@@ -604,7 +604,7 @@ inline void GVB::exe_poke(Poke *p1) {
 
 inline void GVB::exe_call(Call *c1) {
    evalPop(c1->addr);
-   if (m_top.rval < 0 || m_top.rval >= UINT16_MAX + 1) {
+   if (!inRangeCO(m_top.rval, 0, UINT16_MAX + 1)) {
       rerror("Illegal address in CALL: %f", m_top.rval);
    }
    m_device.call(static_cast<uint16_t>(m_top.rval));
@@ -881,7 +881,7 @@ inline void GVB::exe_put(GetPut *gp1) {
 
    evalPop(gp1->record);
    int irec;
-   if (m_top.rval < 1 || m_top.rval >= UINT16_MAX
+   if (!inRangeCO(m_top.rval, 1, UINT16_MAX + 1)
           || (irec = static_cast<int>(m_top.rval - 1)) * rec.len > file.size()) {
       rerror("Bad record number: PUT #%i, %f", gp1->fnum + 1, m_top.rval);
    }
@@ -915,7 +915,7 @@ inline void GVB::exe_get(GetPut *gp1) {
 
    evalPop(gp1->record);
    int irec;
-   if (m_top.rval < 1 || m_top.rval >= UINT16_MAX
+   if (!inRangeCO(m_top.rval, 1, UINT16_MAX + 1)
        || (irec = static_cast<int>(m_top.rval)) * rec.len > file.size()) {
       rerror("Bad record number: GET #%i, %f", gp1->fnum + 1, m_top.rval);
    }
@@ -933,10 +933,10 @@ inline void GVB::exe_get(GetPut *gp1) {
 
 inline uint8_t GVB::getCoord(Expr *coord, const char *x, const char *p) {
    evalPop(coord);
-   if (m_top.rval < 0) {
-      rerror("Illegal %S value in %S: %f", x, p, m_top.rval);
+   if (m_top.rval < 0.0) {
+      rerror("Illegal %S value in %S: %f %f", x, p, m_top.rval, m_envVar["H"].rval);
    }
-   if (m_top.rval >= UINT8_MAX + 1)
+   if (m_top.rval > UINT8_MAX)
       return UINT8_MAX;
    return static_cast<uint8_t>(m_top.rval);
 }
@@ -953,7 +953,7 @@ inline bool GVB::getFillType(Expr *e1) {
    if (nullptr == e1)
       return false;
    evalPop(e1);
-   return m_top.rval != 0.;
+   return !isZero(m_top.rval);
 }
 
 inline void GVB::exe_draw(Draw *d1) {
@@ -1096,14 +1096,14 @@ GVB::Single &GVB::getValue(Id *id1) {
       }
 
       evalPop(ac1->indices[0]);
-      if (m_top.rval < 0 || m_top.rval >= a1.bounds[0]) {
+      if (!inRangeCO(m_top.rval, 0, a1.bounds[0])) {
          rerror("Bad index in array: %s 0[%f]", ac1->id, m_top.rval);
       }
 
       unsigned total = static_cast<unsigned>(m_top.rval);
       for (size_t i = 1; i < ac1->indices.size(); ++i) {
          evalPop(ac1->indices[i]);
-         if (m_top.rval < 0 || m_top.rval >= a1.bounds[i]) {
+         if (!inRangeCO(m_top.rval, 0, a1.bounds[i])) {
             rerror("Bad index in array: %s %i[%f]", ac1->id,
                    static_cast<int>(i), m_top.rval);
          }
@@ -1149,7 +1149,7 @@ inline void GVB::eval_binary(Binary *b1) {
    }
 
    case '/': {
-      if (0.0 == m_top.rval) {
+      if (0.0 == m_top.rval) { // 不能使用isZero()
          rerror("Division by zero");
       }
       auto res = RealHelper::validate(m_stack.back().rval /= m_top.rval);
@@ -1175,29 +1175,29 @@ inline void GVB::eval_binary(Binary *b1) {
       break;
    }
 
-#define CMP(op)    \
+#define CMP(op, ops)    \
    if (Value::Type::REAL == Compiler::getRValType(b1->right->vtype)) { \
-      m_stack.back().rval = m_stack.back().rval op m_top.rval; \
+      m_stack.back().rval = op(m_stack.back().rval, m_top.rval); \
    } else { \
-      m_stack.back().rval = m_stack.back().sval op m_top.sval; \
+      m_stack.back().rval = m_stack.back().sval ops m_top.sval; \
    } \
    break
 
-   case '=': CMP(==);
-   case Token::NEQ: CMP(!=);
-   case Token::GE: CMP(>=);
-   case Token::LE: CMP(<=);
-   case '>': CMP(>);
-   case '<': CMP(<);
+   case '=': CMP(equal, ==);
+   case Token::NEQ: CMP(notEqual, !=);
+   case Token::GE: CMP(greaterEqual, >=);
+   case Token::LE: CMP(lessEqual, <=);
+   case '>': CMP(greater, >);
+   case '<': CMP(less, <);
 
 #undef CMP
 
    case Token::AND:
-      m_stack.back().rval = m_stack.back().rval != 0. && m_top.rval != 0.;
+      m_stack.back().rval = !isZero(m_stack.back().rval) && !isZero(m_top.rval);
       break;
 
    case Token::OR:
-      m_stack.back().rval = m_stack.back().rval != 0. || m_top.rval != 0.;
+      m_stack.back().rval = !isZero(m_stack.back().rval) || !isZero(m_top.rval);
       break;
    }
 }
@@ -1211,7 +1211,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
 
    case Func::Type::NOT:
-      m_stack.back().rval = 0. == m_stack.back().rval;
+      m_stack.back().rval = !isZero(m_stack.back().rval);
       break;
 
    case Func::Type::ABS:
@@ -1226,14 +1226,15 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
 
    case Func::Type::ATN: {
-      auto res = RealHelper::validate(m_stack.back().rval =
-                                            atan(m_stack.back().rval));
-      assert(res == RealHelper::Result::IS_VALID);
+      m_stack.back().rval = atan(m_stack.back().rval);
+      // auto res = RealHelper::validate(m_stack.back().rval =
+      //                                       atan(m_stack.back().rval));
+      // assert(res == RealHelper::Result::IS_VALID);
       break;
    }
 
    case Func::Type::CHR: {
-      if (m_stack.back().rval < 0 || m_stack.back().rval >= 256) {
+      if (!inRangeCO(m_stack.back().rval, 0, 256)) {
          rerror("Illegal argument: CHR$(%f)", m_stack.back().rval);
       }
 
@@ -1243,16 +1244,18 @@ inline void GVB::eval_func(FuncCall *fc) {
    }
 
    case Func::Type::COS: {
-      auto res = RealHelper::validate(m_stack.back().rval =
-                                            cos(m_stack.back().rval));
-      assert(res == RealHelper::Result::IS_VALID);
+      m_stack.back().rval = cos(m_stack.back().rval);
+      // auto res = RealHelper::validate(m_stack.back().rval =
+      //                                       cos(m_stack.back().rval));
+      // assert(res == RealHelper::Result::IS_VALID);
       break;
    }
 
    case Func::Type::SIN: {
-      auto res = RealHelper::validate(m_stack.back().rval =
-                                            sin(m_stack.back().rval));
-      assert(res == RealHelper::Result::IS_VALID);
+      m_stack.back().rval = sin(m_stack.back().rval);
+      // auto res = RealHelper::validate(m_stack.back().rval =
+      //                                       sin(m_stack.back().rval));
+      // assert(res == RealHelper::Result::IS_VALID);
       break;
    }
 
@@ -1277,7 +1280,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
 
    case Func::Type::MKI: { // int => 2-byte
-      if (m_stack.back().rval < INT16_MIN || m_stack.back().rval >= INT16_MAX + 1) {
+      if (!inRangeCO(m_stack.back().rval, INT16_MIN, INT16_MAX + 1)) {
          rerror("Illegal argument in MKI: %f",
                 m_stack.back().rval);
       }
@@ -1308,7 +1311,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       auto res = RealHelper::validate(m_stack.back().rval =
                                             exp(m_stack.back().rval));
       assert(res != RealHelper::Result::IS_NAN);
-      if (RealHelper::Result::IS_NAN == res) {
+      if (RealHelper::Result::IS_INF == res) {
          rerror("Number overflow in EXP");
       }
       break;
@@ -1362,7 +1365,7 @@ inline void GVB::eval_func(FuncCall *fc) {
    case Func::Type::MID: {
       evalPop(fc->expr2);
       auto &s = m_stack.back().sval;
-      if (m_top.rval < 1 || m_top.rval >= s.size() + 1) {
+      if (!inRangeCO(m_top.rval, 1, s.size() + 1)) {
          rerror("Illegal offset in MID: %f, LEN(%s)=%i",
                 m_top.rval, m_stack.back().sval,
                 static_cast<int>(s.size()));
@@ -1374,12 +1377,12 @@ inline void GVB::eval_func(FuncCall *fc) {
       else {
          evalPop(fc->expr3);
       }
-      if (m_top.rval < 1.) {
+      if (m_top.rval < 1.0) {
          rerror("Illegal count in MID: %f", m_top.rval);
       }
       --offset;
       unsigned count = static_cast<unsigned>(m_top.rval);
-      if (offset + m_top.rval >= s.size() + 1)
+      if (offset + count > s.size())
          count = static_cast<unsigned>(s.size() - offset);
       s = s.substr(offset, count);
       break;
@@ -1390,11 +1393,11 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
 
    case Func::Type::RND: {
-      m_stack.back().rval = (0. == m_stack.back().rval ? m_rand.stationary()
+      m_stack.back().rval = (isZero(m_stack.back().rval) ? m_rand.stationary()
             : m_stack.back().rval > 0. ? m_rand.random() : m_rand.sequence())
             / static_cast<double>(Random::MAX + 1);
-      auto res = RealHelper::validate(m_stack.back().rval);
-      assert(res == RealHelper::Result::IS_VALID);
+      // auto res = RealHelper::validate(m_stack.back().rval);
+      // assert(res == RealHelper::Result::IS_VALID);
       break;
    }
 
@@ -1414,8 +1417,8 @@ inline void GVB::eval_func(FuncCall *fc) {
       if (errno) {
          rerror("Illegal argument in SQR");
       }
-      auto res = RealHelper::validate(r);
-      assert(res == RealHelper::Result::IS_VALID);
+      // auto res = RealHelper::validate(r);
+      // assert(res == RealHelper::Result::IS_VALID);
       break;
    }
 
@@ -1437,7 +1440,7 @@ inline void GVB::eval_func(FuncCall *fc) {
    }
 
    case Func::Type::PEEK:
-      if (m_stack.back().rval < 0 || m_stack.back().rval >= UINT16_MAX + 1) {
+      if (!inRangeCO(m_stack.back().rval, 0, UINT16_MAX + 1)) {
          rerror("Illegal argument: PEEK(%f)", m_stack.back().rval);
       }
       m_stack.back().rval = m_device.peek(
@@ -1445,7 +1448,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
 
    case Func::Type::FEOF: {
-      if (m_stack.back().rval < 1 || m_stack.back().rval > 3) {
+      if (!inRangeCO(m_stack.back().rval, 1, 4)) {
          rerror("Illegal file number: EOF(%f)", m_stack.back().rval);
       }
 
@@ -1463,7 +1466,7 @@ inline void GVB::eval_func(FuncCall *fc) {
    }
 
    case Func::Type ::LOF: {
-      if (m_stack.back().rval < 1 || m_stack.back().rval >= 4) {
+      if (!inRangeCO(m_stack.back().rval, 1, 4)) {
          rerror("Illegal file number: LOF(%f)", m_stack.back().rval);
       }
 
@@ -1522,7 +1525,40 @@ inline void GVB::eval_usercall(UserCall *uc1) {
 }
 
 inline void GVB::checkIntRange(double r, const char *s) {
-   if (r < INT16_MIN || r >= INT16_MAX + 1) {
+   if (!inRangeCO(r, INT16_MIN, INT16_MAX + 1)) {
       rerror("Integer overflow in %S: %f", r, s);
    }
+}
+
+inline bool GVB::isZero(double r) {
+   return abs(r) < 1e-9;
+}
+
+inline bool GVB::greater(double r1, double r2) {
+   return r1 > r2 && !equal(r1, r2);
+}
+
+inline bool GVB::less(double r1, double r2) {
+   return r1 < r2 && !equal(r1, r2);
+}
+
+inline bool GVB::greaterEqual(double r1, double r2) {
+   return r1 > r2 || equal(r1, r2);
+}
+
+inline bool GVB::lessEqual(double r1, double r2) {
+   return r1 < r2 || equal(r1, r2);
+}
+
+inline bool GVB::equal(double r1, double r2) {
+   return isZero(r1 - r2);
+}
+
+inline bool GVB::notEqual(double r1, double r2) {
+   return !equal(r1, r2);
+}
+
+// 左闭右开
+inline bool GVB::inRangeCO(double r, double r1, double r2) {
+   return r >= r1 && r < r2;
 }

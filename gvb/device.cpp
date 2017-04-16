@@ -35,7 +35,6 @@ void Device::init() {
    *m_memKey = 0;
    memset(m_memKeyMap, 255, 8);
    setMode(ScreenMode::TEXT);
-   locate(0, 0);
 }
 
 void Device::loadData() {

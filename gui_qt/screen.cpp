@@ -183,7 +183,6 @@ L1:
       while (State::Ready != m_state) {
          QThread::msleep(50);
       }
-      continue;
    }
 }
 
@@ -374,7 +373,7 @@ void Screen::update(int x1, int y1, int x2, int y2) {
 
 void Screen::sleep(int ticks) {
    if (ticks > 0) {
-      QThread::usleep(ticks);
+      QThread::usleep(ticks * m_sleepFactor);
    }
 }
 

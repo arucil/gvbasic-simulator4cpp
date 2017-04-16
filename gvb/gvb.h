@@ -196,6 +196,15 @@ private:
 
    static std::string &removeAllOf(std::string &, const char *, size_t);
 
+   static bool isZero(double r);
+   static bool greater(double, double);
+   static bool less(double, double);
+   static bool greaterEqual(double, double);
+   static bool lessEqual(double, double);
+   static bool notEqual(double, double);
+   static bool equal(double, double);
+   static bool inRangeCO(double, double, double);
+
 public:
    static double str2d(const std::string &); // 不识别inf和nan
 };

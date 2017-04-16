@@ -53,8 +53,8 @@ RealHelper::Result RealHelper::validate(double &d) {
    if (exp > 1023 + 127) {
       // inf
 Linf:
-      l = l & 0x8000'0000'0000'0000L | 0x7ff0'0000'0000'0000L;
-      d = reinterpret_cast<double &>(l);
+      // l = l & 0x8000'0000'0000'0000L | 0x7ff0'0000'0000'0000L;
+      // d = reinterpret_cast<double &>(l);
       return Result::IS_INF;
    }
 
@@ -63,13 +63,14 @@ Linf:
    if (frac & 0x8000'0000) {
       if (++exp > 1023 + 127)
          goto Linf;
-      frac &= 0x7fff'ffff;
+      // frac &= 0x7fff'ffff;
    }
 
-   l = l & 0x8000'0000'0000'0000L
-       | static_cast<uint64_t>(exp) << 52
-       | static_cast<uint64_t>(frac) << 21;
-   d = reinterpret_cast<double &>(l);
+   // 不损失精度
+   // l = l & 0x8000'0000'0000'0000L
+   //     | static_cast<uint64_t>(exp) << 52
+   //     | static_cast<uint64_t>(frac) << 21;
+   // d = reinterpret_cast<double &>(l);
 
    return Result::IS_VALID;
 }
