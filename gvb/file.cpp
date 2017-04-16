@@ -18,6 +18,8 @@ const char *File::toString(Mode mode) {
 		return "RANDOM";
 	case Mode::APPEND:
 		return "APPEND";
+   case Mode::BINARY:
+      return "BINARY";
 	default:
 		assert(0);
 	}
@@ -62,6 +64,9 @@ bool File::open(const string &fn, Mode mode) {
 			}
 		}
 		break;
+   case Mode::BINARY:
+      m_fp = fopen(fn.data(), "rb+");
+      break;
 	case Mode::INPUT:
 		m_fp = fopen(fn.data(), "rb");
 		break;
@@ -88,6 +93,10 @@ void File::skip(size_t n) {
 
 void File::seek(long pos) {
 	fseek(m_fp, pos, SEEK_SET);
+}
+
+long File::tell() {
+   return ftell(m_fp);
 }
 
 void File::writeByte(char c) {

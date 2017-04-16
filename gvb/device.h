@@ -80,6 +80,8 @@ public:
    void cls();
    std::string input();
    uint8_t getKey();
+   bool checkKey(uint8_t);
+   bool getPoint(int x, int y);
    void point(uint8_t x, uint8_t y, DrawMode);
    void rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, bool fill, DrawMode);
    void line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, DrawMode);

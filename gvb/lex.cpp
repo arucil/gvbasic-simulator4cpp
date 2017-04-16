@@ -18,7 +18,7 @@ const char *Token::toString(int tok) {
    k(PUT); k(GET); k(LSET); k(RSET); k(CONT); k(POP); k(REM); k(CLEAR);
    k(WRITE); k(AS); k(POKE); k(CALL); k(CLS); k(FIELD); k(END); k(TAB);
    k(SPC);
-   k(SLEEP); k(PAINT);
+   k(SLEEP); k(PAINT); k(LOAD); k(FPUTC); k(FWRITE); k(FREAD); k(FSEEK);
    case Token::INKEY: return "INKEY$";
    case -1: return "EOF";
    case 10: return "EOL";
@@ -50,7 +50,7 @@ const unordered_map<string, int> Lexer::s_kwmap = {
    kw(PUT), kw(GET), kw(LSET), kw(RSET), kw(CONT), kw(POP),
    kw(REM), kw(CLEAR), kw(WRITE), kw(AS), kw(POKE), kw(CALL),
    kw(CLS), kw(FIELD), kw(END), kw(TAB), kw(SPC), kw(SLEEP),
-   kw(PAINT),
+   kw(PAINT), kw(LOAD), kw(FPUTC), kw(FWRITE), kw(FREAD), kw(FSEEK),
    { "INKEY$", Token::INKEY }
 };
 

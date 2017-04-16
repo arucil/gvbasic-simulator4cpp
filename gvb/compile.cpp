@@ -17,7 +17,8 @@ const unordered_map<string, Func::Type> Compiler::s_builtinFuncs = {
       f(ABS), f(ASC), f(ATN), f(COS), f(EXP), f(INT), f(LEN), f(LOF),
       f(LOG), f(PEEK), f(POS), f(RND), f(SGN), f(SIN), f(SQR), f(TAN), f(VAL),
       fs(CHR), fs(CVI), fs(CVS), fs(LEFT), fs(MID), fs(MKI), fs(MKS), fs(RIGHT),
-      fs(STR), { "EOF", Func::Type::FEOF }
+      fs(STR), { "EOF", Func::Type::FEOF },
+      f(POINT), f(CHECKKEY), f(FOPEN), f(FGETC), f(FTELL)
 };
 
 #undef fs
@@ -451,6 +452,7 @@ Stmt *Compiler::stmt(bool inIf) { // 可能为null
          match('=');
          return m_nodeMan.make<LRSet>(id1, expr(Value::Type::STRING), isL);
       }
+
       case Token::GET:
       case Token::PUT: {
          bool isGet = Token::GET == m_tok;
@@ -494,6 +496,50 @@ Stmt *Compiler::stmt(bool inIf) { // 可能为null
             mode = nullptr;
          }
          return m_nodeMan.make<XPaint>(addr, x, y, w, h, mode);
+      }
+
+      case Token::LOAD: {
+         peek();
+         auto l1 = m_nodeMan.make<XLoad>(expr(Value::Type::REAL));
+         while (true) {
+            match(',');
+            if (m_tok != Token::INT) {
+               match(Token::INT);
+            }
+            if (m_l.ival > 255) {
+               cerror("Integer overflow: %i", m_l.ival);
+            }
+            l1->values.push_back(static_cast<uint8_t>(m_l.ival));
+            peek();
+            if (',' != m_tok)
+               break;
+         }
+         return l1;
+      }
+
+      case Token::FSEEK: {
+         peek();
+         int fnum = getFileNum();
+         match(',');
+         return m_nodeMan.make<XFseek>(fnum, expr(Value::Type::REAL));
+      }
+
+      case Token::FPUTC: {
+         peek();
+         int fnum = getFileNum();
+         match(',');
+         return m_nodeMan.make<XFputc>(fnum, expr(Value::Type::STRING));
+      }
+
+      case Token::FREAD:
+      case Token::FWRITE: {
+         bool isWrite = m_tok == Token::FWRITE;
+         peek();
+         int fnum = getFileNum();
+         match(',');
+         Expr *addr = expr(Value::Type::REAL);
+         match(',');
+         return m_nodeMan.make<XFrw>(fnum, addr, expr(Value::Type::REAL), isWrite);
       }
 
       default: // eol, eof, else ...
@@ -827,6 +873,9 @@ inline Stmt *Compiler::openstmt() {
       } else if ("APPENDAS" == m_l.sval) {
          mode = File::Mode::APPEND;
          m_tok = Token::AS;
+      } else if ("BINARY" == m_l.sval) {
+         mode = File::Mode::BINARY;
+         peek();
       } else {
          cerror("File mode error: [%s]", m_l.sval);
       }
@@ -1081,6 +1130,7 @@ inline Expr *Compiler::idexpr() {
       switch (ft) {
       case Func::Type::LEFT:
       case Func::Type::RIGHT:
+      case Func::Type::POINT:
          match(',');
          e2 = expr(Value::Type::REAL);
          break;

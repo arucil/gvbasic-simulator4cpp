@@ -399,6 +399,13 @@ string Device::input() {
                }
             }
             break;
+         case 27:
+            if (pySize) {
+               pySize = 0;
+               gbLen = 0;
+               gbCurPage = 0;
+            }
+            break;
          case 23: case 19: case 20: // 上翻页
             if (canUp)
                --gbCurPage;
@@ -491,6 +498,13 @@ uint8_t Device::getKey() {
    return static_cast<uint8_t>(a);
 }
 
+bool Device::checkKey(uint8_t key) {
+   if (int m = m_keyMap[key]) {
+      return (m_memKeyMap[m >> 8] & (m & 255)) == 0;
+   }
+   return false;
+}
+
 void Device::onKeyDown(int key, char c) {
    lock_guard<mutex> lock(m_mutKey);
    *m_memKey = static_cast<uint8_t>(128 + key);
@@ -524,6 +538,13 @@ inline void Device::setPoint(uint8_t x, uint8_t y, DrawMode mode) {
    default:
       break;
    }
+}
+
+bool Device::getPoint(int x, int y) {
+   if (x < 0 || y < 0 || x > 159 || y > 79) {
+      return true;
+   }
+   return m_memGraph[y * 20 + (x >> 3)] & s_bitmask[x & 7];
 }
 
 void Device::point(uint8_t x, uint8_t y, DrawMode mode) {

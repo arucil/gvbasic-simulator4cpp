@@ -10,6 +10,7 @@ struct Func {
       ABS = 1, ASC, ATN, CHR, COS, CVI, MKI, CVS, MKS, EXP, INT, LEFT, LEN, LOG,
       MID, POS, RIGHT, RND, SGN, SIN, SQR, STR, TAN, VAL, PEEK, FEOF, LOF,
       NEG, NOT,
+      POINT, CHECKKEY, FOPEN, FGETC, FTELL,
       TAB = 0x81, SPC
    };
 

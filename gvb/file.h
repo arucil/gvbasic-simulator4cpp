@@ -10,7 +10,7 @@ namespace gvbsim {
 	class File {
 	public:
 		enum class Mode {
-			INPUT, OUTPUT, APPEND, RANDOM
+			INPUT, OUTPUT, APPEND, RANDOM, BINARY
 		};
 
 	private:
@@ -30,6 +30,7 @@ namespace gvbsim {
 		void close();
 		void skip(size_t); // 跳过n个字节
 		void seek(long);
+		long tell();
 
 		void writeByte(char);
 		void writeString(const std::string &);

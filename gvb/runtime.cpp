@@ -276,6 +276,91 @@ bool GVB::step() try {
          exe_paint(static_cast<XPaint *>(s));
          break;
 
+      case Stmt::Type::LOAD: {
+         XLoad *l1 = static_cast<XLoad *>(s);
+         evalPop(l1->addr);
+         uint16_t addr = static_cast<uint16_t>(m_top.rval);
+         for (auto i : l1->values) {
+            m_device.poke(addr++, i);
+         }
+         break;
+      }
+
+      case Stmt::Type::FPUTC: {
+         XFputc *p1 = static_cast<XFputc *>(s);
+         auto &file = m_files[p1->fnum];
+         if (!file.isOpen()) {
+            rerror("File not open: FPUTC #%i", p1->fnum + 1);
+         }
+
+         if (file.mode() != File::Mode::BINARY) {
+            rerror("File mode error: FPUTC #%i", p1->fnum + 1);
+         }
+
+         evalPop(p1->ch);
+         if (m_top.sval.empty()) {
+            rerror("Empty string: FPUTC #%i", p1->fnum + 1);
+         }
+         file.writeByte(m_top.sval[0]);
+         break;
+      }
+
+      case Stmt::Type::FSEEK: {
+         XFseek *p1 = static_cast<XFseek *>(s);
+         auto &file = m_files[p1->fnum];
+         if (!file.isOpen()) {
+            rerror("File not open: FSEEK #%i", p1->fnum + 1);
+         }
+
+         if (file.mode() != File::Mode::BINARY) {
+            rerror("File mode error: FSEEK #%i", p1->fnum + 1);
+         }
+
+         evalPop(p1->pos);
+         file.seek(static_cast<long>(m_top.rval));
+         break;
+      }
+
+      case Stmt::Type::FREAD: {
+         XFrw *p1 = static_cast<XFrw *>(s);
+         auto &file = m_files[p1->fnum];
+         if (!file.isOpen()) {
+            rerror("File not open: FREAD #%i", p1->fnum + 1);
+         }
+
+         if (file.mode() != File::Mode::BINARY) {
+            rerror("File mode error: FREAD #%i", p1->fnum + 1);
+         }
+
+         evalPop(p1->addr);
+         uint16_t addr = static_cast<uint16_t>(m_top.rval);
+         evalPop(p1->size);
+         for (size_t i = static_cast<size_t>(m_top.rval); !file.eof() && i-- > 0; ) {
+            m_device.poke(addr++, static_cast<uint8_t>(file.readByte()));
+         }
+         break;
+      }
+
+      case Stmt::Type::FWRITE: {
+         XFrw *p1 = static_cast<XFrw *>(s);
+         auto &file = m_files[p1->fnum];
+         if (!file.isOpen()) {
+            rerror("File not open: FWRITE #%i", p1->fnum + 1);
+         }
+
+         if (file.mode() != File::Mode::BINARY) {
+            rerror("File mode error: FWRITE #%i", p1->fnum + 1);
+         }
+
+         evalPop(p1->addr);
+         uint16_t addr = static_cast<uint16_t>(m_top.rval);
+         evalPop(p1->size);
+         for (size_t i = static_cast<size_t>(m_top.rval); i-- > 0; ) {
+            file.writeByte(static_cast<char>(m_device.peek(addr++)));
+         }
+         break;
+      }
+
       default:
          assert(0);
       }
@@ -713,7 +798,7 @@ inline void GVB::exe_open(Open *o1) {
       fname += ".DAT";
    }
 
-   if (!m_files[o1->fnum].open(fname, o1->mode)) {
+   if (!m_files[o1->fnum].open(fname, o1->mode) && o1->mode != File::Mode::BINARY) {
       rerror("File open error: %s", fname);
    }
 
@@ -1465,7 +1550,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
    }
 
-   case Func::Type ::LOF: {
+   case Func::Type::LOF: {
       if (!inRangeCO(m_stack.back().rval, 1, 4)) {
          rerror("Illegal file number: LOF(%f)", m_stack.back().rval);
       }
@@ -1480,6 +1565,50 @@ inline void GVB::eval_func(FuncCall *fc) {
       }
 
       m_stack.back().rval = static_cast<double>(m_files[fnum].size());
+      break;
+   }
+
+   case Func::Type::CHECKKEY:
+      m_stack.back().rval = m_device.checkKey(
+            static_cast<uint8_t>(m_stack.back().rval));
+      break;
+
+   case Func::Type::POINT:
+      evalPop(fc->expr2);
+      m_stack.back().rval = m_device.getPoint(
+            static_cast<int>(m_stack.back().rval),
+            static_cast<int>(m_top.rval));
+      break;
+
+   case Func::Type::FOPEN:
+      m_stack.back().rval = m_files[static_cast<int>(m_stack.back().rval - 1)].isOpen();
+      break;
+
+   case Func::Type::FGETC: {
+      int fnum = static_cast<int>(m_stack.back().rval) - 1;
+      if (!m_files[fnum].isOpen()) {
+         rerror("File not open: FGETC(%i)", fnum + 1);
+      }
+
+      if (m_files[fnum].mode() != File::Mode::BINARY) {
+         rerror("File mode error: FGETC(%i), mode:%m", fnum + 1, m_files[fnum].mode());
+      }
+
+      m_stack.back().rval = static_cast<uint8_t>(m_files[fnum].readByte());
+      break;
+   }
+
+   case Func::Type::FTELL: {
+      int fnum = static_cast<int>(m_stack.back().rval) - 1;
+      if (!m_files[fnum].isOpen()) {
+         rerror("File not open: FTELL(%i)", fnum + 1);
+      }
+
+      if (m_files[fnum].mode() != File::Mode::BINARY) {
+         rerror("File mode error: FTELL(%i), mode:%m", fnum + 1, m_files[fnum].mode());
+      }
+
+      m_stack.back().rval = m_files[fnum].tell();
       break;
    }
 

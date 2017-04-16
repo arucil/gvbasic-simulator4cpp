@@ -4,6 +4,7 @@
 #include <utility>
 #include <string>
 #include <vector>
+#include <cstdint>
 #include "value.h"
 #include "node.h"
 #include "func.h"
@@ -17,7 +18,8 @@ struct Stmt : Node { // 语句
       GOSUB, RETURN, READ, RESTORE, INPUT, FINPUT, PRINT, LOCATE, INKEY,
       GRAPH, TEXT, DRAW, LINE, BOX, CIRCLE, ELLIPSE, OPEN, CLOSE, PUT,
       GET, LSET, RSET, POP, CLEAR, WRITE, POKE, CALL, END, FIELD, GOTO,
-      INVERSE, DEFFN, PLAY, BEEP, NEWLINE, SLEEP, PAINT
+      INVERSE, DEFFN, PLAY, BEEP, NEWLINE,
+      SLEEP, PAINT, LOAD, FSEEK, FPUTC, FREAD, FWRITE
    };
 
 public:
@@ -460,6 +462,47 @@ public:
          : Stmt(Type::PAINT),
            addr(addr), x(x), y(y), w(w), h(h), mode(mode) { }
 };
+
+struct XLoad : Stmt {
+   Expr *addr;
+   std::vector<std::uint8_t> values;
+
+public:
+   XLoad(Expr *addr)
+         : Stmt(Type::LOAD),
+           addr(addr) { }
+};
+
+struct XFputc : Stmt {
+   int fnum;
+   Expr *ch;
+
+public:
+   XFputc(int fnum, Expr *ch)
+         : Stmt(Type::FPUTC),
+           fnum(fnum), ch(ch) { }
+};
+
+struct XFrw : Stmt {
+   int fnum;
+   Expr *addr, *size;
+
+public:
+   XFrw(int fnum, Expr *addr, Expr *size, bool isWrite)
+         : Stmt(isWrite ? Type::FWRITE : Type::FREAD),
+           fnum(fnum), addr(addr), size(size) { }
+};
+
+struct XFseek : Stmt {
+   int fnum;
+   Expr *pos;
+
+public:
+   XFseek(int fnum, Expr *pos)
+         : Stmt(Type::FSEEK),
+           fnum(fnum), pos(pos) { }
+};
+
 
 }
 

@@ -17,7 +17,8 @@ string getFuncName(Func::Type t) {
    f(ABS); f(ASC); f(ATN); f(COS); f(EXP); f(INT); f(LEN); f(LOF);
    f(LOG); f(PEEK); f(POS); f(RND); f(SGN); f(SIN); f(SQR); f(TAN); f(VAL);
    fs(CHR); fs(CVI); fs(CVS); fs(LEFT); fs(MID); fs(MKI); fs(MKS); fs(RIGHT);
-   fs(STR); f(TAB); f(SPC); f(NOT);
+   fs(STR); f(TAB); f(SPC); f(NOT); f(POINT); f(CHECKKEY); f(FOPEN); f(FGETC);
+   f(FTELL);
    case Func::Type::FEOF: return "EOF";
    case Func::Type::NEG: return "-";
    default:
@@ -436,6 +437,40 @@ void print(Stmt *s, int lv, ostream &out) {
          out << ", ";
          print(p1->mode, out);
       }
+      break;
+   }
+   case Stmt::Type::LOAD: {
+      XLoad *l1 = (XLoad *) s;
+      out << "LOAD ";
+      print(l1->addr, out);
+      for (auto i : l1->values) {
+         out << ", " << i;
+      }
+      break;
+   }
+   case Stmt::Type::FPUTC: {
+      XFputc *p1 = (XFputc *) s;
+      out << "FPUTC #" << p1->fnum << ", ";
+      print(p1->ch, out);
+      break;
+   }
+   case Stmt::Type::FWRITE:
+   case Stmt::Type::FREAD: {
+      XFrw *p1 = (XFrw *) s;
+      if (s->type == Stmt::Type::FWRITE)
+         out << "FWRITE #";
+      else
+         out << "FREAD #";
+      out << p1->fnum;
+      print(p1->addr, out);
+      out << ", ";
+      print(p1->size, out);
+      break;
+   }
+   case Stmt::Type::FSEEK: {
+      XFseek *s1 = (XFseek *) s;
+      out << "FSEEK #" << s1->fnum << ", ";
+      print(s1->pos, out);
       break;
    }
    case Stmt::Type::PLAY:
