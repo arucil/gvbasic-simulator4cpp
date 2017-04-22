@@ -10,21 +10,21 @@ using namespace std;
 using namespace gvbsim;
 
 
-VarEditDialog::VarEditDialog(QWidget *parent, GVB::Single *var, Value::Type type)
-   : QDialog(parent), m_var(var), m_type(type) {
+VarEditDialog::VarEditDialog(QWidget *parent, GVB::Single *val, Value::Type type)
+   : QDialog(parent), m_val(val), m_type(type) {
    auto fmlayout = new QFormLayout;
    fmlayout->addRow(tr("新值"), m_edit = new QLineEdit(this));
    switch (type) {
    case Value::Type::INT:
-      m_edit->setText(QString::number(var->ival));
+      m_edit->setText(QString::number(val->ival));
       m_edit->setValidator(new QIntValidator(INT16_MIN, INT16_MAX, this));
       break;
    case Value::Type::REAL:
-      m_edit->setText(QString::number(var->rval));
+      m_edit->setText(QString::number(val->rval, 'G', 9));
       m_edit->setValidator(new QDoubleValidator(this));
       break;
    case Value::Type::STRING:
-      m_edit->setText(QString::fromStdString(var->sval));
+      m_edit->setText(QString::fromStdString(val->sval));
       break;
    }
    
@@ -45,13 +45,13 @@ VarEditDialog::VarEditDialog(QWidget *parent, GVB::Single *var, Value::Type type
 void VarEditDialog::edit() {
    switch (m_type) {
    case Value::Type::INT:
-      m_var->ival = m_edit->text().toInt();
+      m_val->ival = m_edit->text().toInt();
       break;
    case Value::Type::REAL:
-      m_var->rval = m_edit->text().toDouble();
+      m_val->rval = m_edit->text().toDouble();
       break;
    case Value::Type::STRING:
-      m_var->sval = m_edit->text().toStdString();
+      m_val->sval = m_edit->text().toStdString();
       break;
    }
    close();
