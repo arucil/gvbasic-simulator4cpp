@@ -1296,7 +1296,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       break;
 
    case Func::Type::NOT:
-      m_stack.back().rval = !isZero(m_stack.back().rval);
+      m_stack.back().rval = isZero(m_stack.back().rval);
       break;
 
    case Func::Type::ABS:
@@ -1613,6 +1613,7 @@ inline void GVB::eval_func(FuncCall *fc) {
    }
 
    default:
+      printf("%d\n", fc->ftype);fflush(stdout);
       assert(0);
    }
 }

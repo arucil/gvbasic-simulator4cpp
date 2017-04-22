@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <mutex>
 #include <unordered_map>
+#include "fake6502_wrap.h"
 
 namespace gvbsim {
 
@@ -14,7 +15,7 @@ using std::uint8_t;
 using std::uint16_t;
 
 
-class Device {
+class Device : public fake6502::Fake6502Wrapper {
 public:
    enum class ScreenMode {
       TEXT, GRAPH
@@ -111,6 +112,12 @@ public:
 
    static void loadData();
    static void loadFile(const char *, uint8_t *, size_t n);
+
+protected:
+   uint8_t read6502(uint16_t) override;
+   void write6502(uint16_t, uint8_t) override;
+   void interrupt(uint16_t) override;
+   void stepHook() override;
 
 private:
    void moveRow();

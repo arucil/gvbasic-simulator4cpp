@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QTimer>
 #include <QDateTime>
+#include <QTableWidget>
 #include <cstdlib>
 #include <cstdio>
 #include <cassert>
@@ -37,9 +38,10 @@ const unordered_map<int, int> Screen::s_wqxKeyMap {
 #undef k
 
 
-Screen::Screen(QLabel *status, QLabel *im)
+Screen::Screen(QLabel *status, QLabel *im, QTableWidget *table)
       : m_status(status),
         m_im(im),
+        m_table(table),
         m_fileDlg(this) {
    loadConfig();
    initFileDlg();
@@ -79,6 +81,8 @@ void Screen::loadConfig() {
    setImage(m_gvb.device().getGraphBuffer(),
             strtol(gui1["fgcolor"].c_str(), nullptr, 0),
             strtol(gui1["bgcolor"].c_str(), nullptr, 0));
+   
+   m_table->setFixedHeight(100 * m_scale);
    
    m_sleepFactor = atoi(gui1["sleepfactor"].c_str());
    
@@ -198,17 +202,20 @@ Screen::Result Screen::run() {
       m_status->setText(tr("Running"));
       m_state = State::Running;
       m_timerBlink->start(500);
+      m_table->setEnabled(false);
       // notify before unlocking may block waiting thread immediately again ?
       m_cv.notify_one();
       return Result::Start;
    case State::Paused:
       m_status->setText(tr("Running"));
       m_state = State::Running;
+      m_table->setEnabled(false);
       m_cv.notify_one();
       return Result::Resume;
    case State::Running:
       m_state = State::Paused;
       m_status->setText(tr("Paused"));
+      m_table->setEnabled(true);
       clearCursor();
       return Result::Pause;
    default:
@@ -222,6 +229,7 @@ void Screen::stop() {
       m_state = State::Ready;
    }
    m_timerBlink->stop();
+   m_table->setEnabled(true);
    clearCursor();
    m_status->setText(tr("Ready"));
 }

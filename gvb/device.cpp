@@ -885,4 +885,25 @@ void Device::rollData(void *data, int size, int bit) {
 }
 
 void Device::call(uint16_t addr) {
+   using namespace fake6502;
+   Fake6502Wrapper::reset(addr);
+   try {
+      Fake6502Wrapper::exec();
+   } catch (Fake6502Wrapper::Quit) {
+   }
+}
+
+uint8_t Device::read6502(uint16_t addr) {
+   return peek(addr);
+}
+
+void Device::write6502(uint16_t addr, uint8_t val) {
+   poke(addr, val);
+}
+
+void Device::interrupt(uint16_t) { }
+
+void Device::stepHook() {
+   if (m_gui->isStopped())
+      throw fake6502::Fake6502Wrapper::Quit();
 }

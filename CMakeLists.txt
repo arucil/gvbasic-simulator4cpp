@@ -3,6 +3,8 @@ project(GVBASIC)
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-operator-names")
+
 set(GVB_SOURCE_FILES
         gvb/lex.h
         gvb/lex.cpp
@@ -34,6 +36,7 @@ set(GVB_SOURCE_FILES
         gvb/igui.h
         # gvb/test/test_runtime.cpp
         gvb/device.cpp
+        gvb/fake6502_wrap.cpp
         )
 
 add_executable(GVBASIC ${GVB_SOURCE_FILES})

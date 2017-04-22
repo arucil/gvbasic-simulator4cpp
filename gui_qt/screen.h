@@ -21,6 +21,7 @@ class QKeyEvent;
 class GuiQt;
 class QLabel;
 class QTimer;
+class QTableWidget;
 
 
 class Screen : public QWidget, public gvbsim::IGui {
@@ -36,7 +37,7 @@ public:
    };
    
 public:
-   explicit Screen(QLabel *status, QLabel *im);
+   explicit Screen(QLabel *status, QLabel *im, QTableWidget *table);
    ~Screen();
    
 public:
@@ -94,6 +95,7 @@ private:
    int m_sleepFactor;
    QLabel *m_status;
    QLabel *m_im;
+   QTableWidget *m_table;
    std::thread m_thread;
    std::mutex m_mutState;
    std::condition_variable m_cv;

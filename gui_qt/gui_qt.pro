@@ -13,7 +13,7 @@ TEMPLATE = app
 
 CONFIG += c++14
 
-QMAKE_CXXFLAGS += -pthread
+QMAKE_CXXFLAGS += -pthread -fno-operator-names
 LIBS += -pthread
 
 # The following define makes your compiler emit warnings if you use
@@ -40,6 +40,7 @@ SOURCES += main.cpp\
     ../gvb/real.cpp \
     ../gvb/runtime.cpp \
     ../gvb/value.cpp \
+    ../gvb/fake6502_wrap.cpp \
     gui_qt.cpp \
     readconfig.cpp \
     screen.cpp
@@ -60,6 +61,7 @@ HEADERS  += \
     ../gvb/real.h \
     ../gvb/tree.h \
     ../gvb/value.h \
+    ../gvb/fake6502_wrap.h \
     gui_qt.h \
     readconfig.h \
     screen.h
