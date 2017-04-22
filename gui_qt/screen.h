@@ -22,6 +22,7 @@ class GuiQt;
 class QLabel;
 class QTimer;
 class QTableWidget;
+class QTableWidgetItem;
 
 
 class Screen : public QWidget, public gvbsim::IGui {
@@ -68,6 +69,9 @@ private:
    
    void clearCursor();
    
+   void loadVarList();
+   void setItemText(QTableWidgetItem *, gvbsim::Value::Type, gvbsim::GVB::Single *);
+   
 protected:
    void paintEvent(QPaintEvent *);
    void resizeEvent(QResizeEvent *);
@@ -79,6 +83,7 @@ public slots:
    
 private slots:
    void blink();
+   void varDoubleClicked(int row, int col);
    
 signals:
    void stopped();

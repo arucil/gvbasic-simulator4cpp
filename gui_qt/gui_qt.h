@@ -8,7 +8,6 @@ class Screen;
 class QLabel;
 class QAction;
 class QKeyEvent;
-class QTableWidget;
 
 
 class GuiQt : public QMainWindow {
@@ -35,7 +34,6 @@ private slots:
    
 private:
    Screen *m_screen;
-   QTableWidget *m_table;
    QAction *m_mnuOpen, *m_mnuRun, *m_mnuStop;
    
 };

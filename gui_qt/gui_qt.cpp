@@ -25,16 +25,16 @@ GuiQt::GuiQt() {
    auto status = new QLabel(this);
    auto im = new QLabel(this);
    
-   m_table = new QTableWidget(this);
-   m_table->setColumnCount(2);
+   auto table = new QTableWidget(this);
+   table->setColumnCount(2);
    QStringList ls;
    ls << "变量" << "值";
-   m_table->setHorizontalHeaderLabels(ls);
-   m_table->verticalHeader()->hide();
-   m_table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-   m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+   table->setHorizontalHeaderLabels(ls);
+   table->verticalHeader()->hide();
+   table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+   table->setSelectionBehavior(QAbstractItemView::SelectRows);
    
-   m_screen = new Screen(status, im, m_table);
+   m_screen = new Screen(status, im, table);
    
    connect(m_screen, &Screen::stopped, this, &GuiQt::stop, Qt::QueuedConnection);
    
@@ -49,7 +49,7 @@ GuiQt::GuiQt() {
    
    QVBoxLayout *layout = new QVBoxLayout(central);
    layout->addWidget(m_screen, 0);
-   layout->addWidget(m_table, 0);
+   layout->addWidget(table, 0);
    
    setCentralWidget(central);
    

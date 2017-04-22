@@ -43,7 +43,8 @@ SOURCES += main.cpp\
     ../gvb/fake6502_wrap.cpp \
     gui_qt.cpp \
     readconfig.cpp \
-    screen.cpp
+    screen.cpp \
+    var_edit_dlg.cpp
 
 HEADERS  += \
     ../gvb/compile.h \
@@ -64,4 +65,5 @@ HEADERS  += \
     ../gvb/fake6502_wrap.h \
     gui_qt.h \
     readconfig.h \
-    screen.h
+    screen.h \
+    var_edit_dlg.h

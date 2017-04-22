@@ -11,9 +11,12 @@
 #include <cstdio>
 #include <cassert>
 #include <mutex>
+#include <map>
 #include "../gvb/device.h"
 #include "../gvb/error.h"
+#include "../gvb/compile.h"
 #include "readconfig.h"
+#include "var_edit_dlg.h"
 
 using namespace gvbsim;
 using namespace std;
@@ -56,6 +59,8 @@ Screen::Screen(QLabel *status, QLabel *im, QTableWidget *table)
    connect(m_timerBlink, &QTimer::timeout, this, &Screen::blink);
    
    m_timerUpdate.start(20, this); // 50 hz
+   
+   connect(table, &QTableWidget::cellDoubleClicked, this, &Screen::varDoubleClicked);
    
    m_thread = std::thread(&Screen::threadRun, this);
 }
@@ -216,6 +221,7 @@ Screen::Result Screen::run() {
       m_state = State::Paused;
       m_status->setText(tr("Paused"));
       m_table->setEnabled(true);
+      loadVarList();
       clearCursor();
       return Result::Pause;
    default:
@@ -230,8 +236,80 @@ void Screen::stop() {
    }
    m_timerBlink->stop();
    m_table->setEnabled(true);
+   loadVarList();
    clearCursor();
    m_status->setText(tr("Ready"));
+}
+
+void Screen::setItemText(QTableWidgetItem *p, Value::Type type, GVB::Single *v) {
+   switch (type) {
+   case Value::Type::INT:
+      p->setText(QString::number(v->ival));
+      break;
+   case Value::Type::REAL:
+      p->setText(QString::number(v->rval, 'G', 9));
+      break;
+   case Value::Type::STRING:
+      p->setText(QString::fromStdString(v->sval));
+      break;
+   }
+}
+
+void Screen::loadVarList() {
+   m_table->setRowCount(m_gvb.getVars().size() + m_gvb.getArrays().size());
+   
+   int t = -1;
+   for (auto &i : m_gvb.getVars()) {
+      auto p = new QTableWidgetItem(QString::fromStdString(i.first));
+      p->setFlags(p->flags() ^ Qt::ItemIsEditable);
+      m_table->setItem(++t, 0, p);
+      
+      p = new QTableWidgetItem;
+      setItemText(p, Compiler::getIdType(i.first), &i.second);
+      p->setData(Qt::UserRole, reinterpret_cast<qlonglong>(&i.second)); // ....
+      p->setFlags(p->flags() ^ Qt::ItemIsEditable);
+      m_table->setItem(t, 1, p);
+   }
+   
+   for (auto &i : m_gvb.getArrays()) {
+      auto q = new QTableWidgetItem(tr("..."));
+      q->setData(Qt::UserRole, reinterpret_cast<qlonglong>(&i.second)); // ....
+      q->setFlags(q->flags() ^ Qt::ItemIsEditable);
+      m_table->setItem(++t, 1, q);
+      
+      char buf[1024];
+      auto p = buf + i.first.copy(buf, i.first.size());
+      *p++ = '(';
+      for (auto k : i.second.bounds) {
+         p += sprintf(p, "%u, ", k);
+      }
+      p[-2] = ')';
+      p[-1] = 0;
+      q = new QTableWidgetItem(tr(buf));
+      q->setFlags(q->flags() ^ Qt::ItemIsEditable);
+      m_table->setItem(t, 0, q);
+   }
+   
+   m_table->sortByColumn(0, Qt::AscendingOrder);
+}
+
+void Screen::varDoubleClicked(int row, int) {
+   if (State::Ready == m_state) {
+      return;
+   }
+   const QString &name = m_table->item(row, 0)->text();
+   auto val = m_table->item(row, 1);
+   
+   if (')' == name[name.size() - 1]) { // array
+   } else {
+      auto v = reinterpret_cast<GVB::Single *>(val->data(Qt::UserRole).toLongLong());
+      auto type = Compiler::getIdType(name.toStdString());
+      VarEditDialog dlg(this, v, type);
+      
+      dlg.setWindowTitle(name);
+      dlg.exec();
+      setItemText(val, type, v);
+   }
 }
 
 void Screen::captureScreen() {

@@ -78,6 +78,14 @@ class GVB {
             : line(line), label(label), stmt(stmt) { }
    };
 
+   // random文的记录
+   struct Record {
+      int len; // open语句定义的LEN
+      int total; // field语句定义的len，可能小于上面的len
+      std::vector<std::pair<int, std::string>> fields;
+   };
+
+public:
    // 单个值
    struct Single {
       union {
@@ -98,13 +106,6 @@ class GVB {
    struct Array {
       std::vector<unsigned> bounds;
       std::vector<Single> vals;
-   };
-
-   // random文件的记录
-   struct Record {
-      int len; // open语句定义的LEN
-      int total; // field语句定义的len，可能小于上面的len
-      std::vector<std::pair<int, std::string>> fields;
    };
 
 public:
@@ -141,6 +142,8 @@ public:
    bool step(); // 返回是否可以继续执行
 
    Device &device() { return m_device; }
+   decltype(m_envVar) &getVars() { return m_envVar; }
+   decltype(m_envArray) &getArrays() { return m_envArray; }
 
 private:
    void clearEnv();
