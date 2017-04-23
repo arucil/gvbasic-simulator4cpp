@@ -34,7 +34,7 @@ class Screen : public QWidget, public gvbsim::IGui {
    
 public:
    enum class Result {
-      Start, Resume, Pause
+      Start, Resume, Pause, Ready
    };
    
 public:

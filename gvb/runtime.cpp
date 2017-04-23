@@ -293,8 +293,8 @@ bool GVB::step() try {
             rerror("File not open: FPUTC #%i", p1->fnum + 1);
          }
 
-         if (file.mode() != File::Mode::BINARY) {
-            rerror("File mode error: FPUTC #%i", p1->fnum + 1);
+         if (file.mode() != File::Mode::BINARY && file.mode() != File::Mode::RANDOM) {
+            rerror("File mode error: FPUTC #%i, mode:%m", p1->fnum + 1, file.mode());
          }
 
          evalPop(p1->ch);
@@ -312,8 +312,8 @@ bool GVB::step() try {
             rerror("File not open: FSEEK #%i", p1->fnum + 1);
          }
 
-         if (file.mode() != File::Mode::BINARY) {
-            rerror("File mode error: FSEEK #%i", p1->fnum + 1);
+         if (file.mode() != File::Mode::BINARY && file.mode() != File::Mode::RANDOM) {
+            rerror("File mode error: FSEEK #%i, mode:%m", p1->fnum + 1, file.mode());
          }
 
          evalPop(p1->pos);
@@ -328,8 +328,8 @@ bool GVB::step() try {
             rerror("File not open: FREAD #%i", p1->fnum + 1);
          }
 
-         if (file.mode() != File::Mode::BINARY) {
-            rerror("File mode error: FREAD #%i", p1->fnum + 1);
+         if (file.mode() != File::Mode::BINARY && file.mode() != File::Mode::RANDOM) {
+            rerror("File mode error: FREAD #%i, mode:%m", p1->fnum + 1, file.mode());
          }
 
          evalPop(p1->addr);
@@ -348,8 +348,8 @@ bool GVB::step() try {
             rerror("File not open: FWRITE #%i", p1->fnum + 1);
          }
 
-         if (file.mode() != File::Mode::BINARY) {
-            rerror("File mode error: FWRITE #%i", p1->fnum + 1);
+         if (file.mode() != File::Mode::BINARY && file.mode() != File::Mode::RANDOM) {
+            rerror("File mode error: FWRITE #%i, mode:%m", p1->fnum + 1, file.mode());
          }
 
          evalPop(p1->addr);
@@ -1586,34 +1586,35 @@ inline void GVB::eval_func(FuncCall *fc) {
 
    case Func::Type::FGETC: {
       int fnum = static_cast<int>(m_stack.back().rval) - 1;
-      if (!m_files[fnum].isOpen()) {
+      auto &file = m_files[fnum];
+      if (!file.isOpen()) {
          rerror("File not open: FGETC(%i)", fnum + 1);
       }
 
-      if (m_files[fnum].mode() != File::Mode::BINARY) {
-         rerror("File mode error: FGETC(%i), mode:%m", fnum + 1, m_files[fnum].mode());
+      if (file.mode() != File::Mode::BINARY && file.mode() != File::Mode::RANDOM) {
+         rerror("File mode error: FGETC(%i), mode:%m", fnum + 1, file.mode());
       }
 
-      m_stack.back().rval = static_cast<uint8_t>(m_files[fnum].readByte());
+      m_stack.back().rval = static_cast<uint8_t>(file.readByte());
       break;
    }
 
    case Func::Type::FTELL: {
       int fnum = static_cast<int>(m_stack.back().rval) - 1;
-      if (!m_files[fnum].isOpen()) {
+      auto &file = m_files[fnum];
+      if (!file.isOpen()) {
          rerror("File not open: FTELL(%i)", fnum + 1);
       }
 
-      if (m_files[fnum].mode() != File::Mode::BINARY) {
-         rerror("File mode error: FTELL(%i), mode:%m", fnum + 1, m_files[fnum].mode());
+      if (file.mode() != File::Mode::BINARY && file.mode() != File::Mode::RANDOM) {
+         rerror("File mode error: FTELL(%i), mode:%m", fnum + 1, file.mode());
       }
 
-      m_stack.back().rval = m_files[fnum].tell();
+      m_stack.back().rval = file.tell();
       break;
    }
 
    default:
-      printf("%d\n", fc->ftype);fflush(stdout);
       assert(0);
    }
 }
@@ -1624,7 +1625,7 @@ inline void GVB::eval_usercall(UserCall *uc1) {
       rerror("Function undefined: %s", uc1->fnName);
    }
 
-   if (Compiler::getIdRValType(f1->varName) != uc1->expr->vtype) {
+   if (Compiler::getIdRValType(f1->varName) != Compiler::getRValType(uc1->expr->vtype)) {
       rerror("Incompatible type in FN %s(%s: %t): [%t]",
              uc1->fnName, f1->varName, Compiler::getIdRValType(f1->varName),
              uc1->expr->vtype);

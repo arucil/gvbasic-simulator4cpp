@@ -41,17 +41,17 @@
 			打开二进制文件  
 			和RANDOM模式类似, 区别是BINARY不会新建文件, 并且不能用LEN
       - ```FPUTC fnum, m_c$```  
-			写入c$的第一字节, 用于BINARY模式
+			写入c$的第一字节, 用于BINARY/RANDOM模式
       - ```FREAD fnum, addr, size```  
-			从文件读取`size`字节到地址`addr`, 用于BINARY模式
+			从文件读取`size`字节到地址`addr`, 用于BINARY/RANDOM模式
       - ```FWRITE fnum, addr, size```  
-			写入地址`addr`开始的`size`字节到文件, 用于BINARY模式
+			写入地址`addr`开始的`size`字节到文件, 用于BINARY/RANDOM模式
       - ```FSEEK fnum, pt```  
-			设置文件指针为`pt`的值, 用于BINARY模式
+			设置文件指针为`pt`的值, 用于BINARY/RANDOM模式
 	- 函数  
 		- ```FOPEN(fnum)```  
 			判断文件是否打开
       - ```FGETC(fnum)```  
-			从文件读取一字节, 用于BINARY模式
+			从文件读取一字节, 用于BINARY/RANDOM模式
       - ```FTELL(fnum)```  
-			获取文件指针
+			获取文件指针，用于BINARY/RANDOM模式

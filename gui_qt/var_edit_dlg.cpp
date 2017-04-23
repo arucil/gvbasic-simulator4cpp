@@ -119,7 +119,7 @@ void ArrEditDialog::updateValue(int) {
 unsigned ArrEditDialog::calcOffset() {
    unsigned off = m_spins[0]->value();
    for (size_t i = 1; i < m_spins.size(); ++i) {
-      off += m_spins[i]->value() * m_arr->bounds[i];
+      off = off * m_arr->bounds[i] + m_spins[i]->value();
    }
    return off;
 }

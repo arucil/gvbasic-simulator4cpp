@@ -24,6 +24,7 @@ const uint8_t Device::s_bitmask[8] = {
 
 
 Device::Device() : m_gui(nullptr), m_memGraph(nullptr) {
+   memset(m_mem, 0, sizeof (m_mem));
 }
 
 void Device::setGui(IGui *gui) {

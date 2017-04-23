@@ -112,6 +112,8 @@ void GuiQt::run() {
    case Screen::Result::Pause:
       m_mnuRun->setText(tr("继续"));
       break;
+   case Screen::Result::Ready:
+      break;
    }
 }
 

@@ -208,6 +208,9 @@ Screen::Result Screen::run() {
    lock_guard<mutex> lock(m_mutState);
    switch (m_state) {
    case State::Ready:
+      if (!m_gvb.isBuilt()) {
+         return Result::Ready;
+      }
       m_status->setText(tr("Running"));
       m_state = State::Running;
       m_timerBlink->start(500);
