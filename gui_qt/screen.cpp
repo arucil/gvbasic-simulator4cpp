@@ -241,6 +241,7 @@ void Screen::stop() {
       lock_guard<mutex> lock(m_mutState);
       m_state = State::Ready;
    }
+   m_cv.notify_one();
    m_timerBlink->stop();
    m_table->setEnabled(true);
    loadVarList();

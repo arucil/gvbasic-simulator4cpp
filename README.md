@@ -1,5 +1,5 @@
 # GVBASIC模拟器
-GVBASIC模拟器的C++ Qt版本。
+GVBASIC模拟器的C++版本。（C++14 & Qt5）
 
 ## 特性
 - 支持GVBASIC所有语句和函数
