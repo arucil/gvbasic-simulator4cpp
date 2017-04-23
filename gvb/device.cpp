@@ -485,8 +485,9 @@ uint8_t Device::getKey() {
          lock_guard<mutex> lock(m_mutKey);
          a = static_cast<int>(*m_memKey) - 128;
       }
-      if (m_gui->isStopped())
+      if (m_gui->isStopped()) {
          throw GVB::Quit();
+      }
       this_thread::sleep_for(chrono::milliseconds(50));
    } while (a < 0);
    m_enableCursor = false;

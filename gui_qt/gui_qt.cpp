@@ -125,12 +125,14 @@ void GuiQt::stop() {
 void GuiQt::showHelp() {
    QMessageBox::about(this,
                 tr("内容"),
-                tr("1. 输入文字时使用Shift切换中英文输入\n"
-                   "2. 键位：\n"
+                tr("● 输入文字时使用Shift切换中英文输入\n"
+                   "● 特殊键位：\n"
                    "    跳出: Esc\n"
                    "    帮助: `\n"
                    "    CAPS: Ctrl\n"
-                   "3. 变量表只有暂停程序时才可用"));
+                   "● 变量表只有暂停程序时才可用\n"
+                   "● 双击变量表的某一项可以修改该变量\n"
+                   "● 如果在变量表中看到以下划线开头的变量，那是内部使用的，不用理会"));
 }
 
 void GuiQt::showAbout() {

@@ -2,10 +2,12 @@
 #define VAR_EDIT_DLG_H
 
 #include <QDialog>
+#include <vector>
 #include "../gvb/gvb.h"
 
 
 class QLineEdit;
+class QSpinBox;
 
 
 class VarEditDialog : public QDialog {
@@ -24,6 +26,7 @@ private:
    const gvbsim::Value::Type m_type;
 };
 
+
 class ArrEditDialog : public QDialog {
    Q_OBJECT
    
@@ -33,9 +36,14 @@ public:
    
 private slots:
    void edit();
+   void updateValue(int);
+   
+private:
+   unsigned calcOffset();
    
 private:
    gvbsim::GVB::Array *const m_arr;
+   std::vector<QSpinBox *> m_spins;
    QLineEdit *m_edit;
    const gvbsim::Value::Type m_type;
 };

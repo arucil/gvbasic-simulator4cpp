@@ -181,6 +181,10 @@ void Screen::threadRun() {
             if (State::Quit == m_state)
                return;
          } while (m_gvb.step());
+         
+         if (State::Quit == m_state) {
+            return;
+         }
       } catch (Exception &e) {
          setError(QStringLiteral("%1(line:%2): %3").arg(e.label).arg(e.line).arg(QString::fromStdString(e.msg)));
       }
@@ -281,7 +285,7 @@ void Screen::loadVarList() {
       auto p = buf + i.first.copy(buf, i.first.size());
       *p++ = '(';
       for (auto k : i.second.bounds) {
-         p += sprintf(p, "%u, ", k);
+         p += sprintf(p, "%u, ", k - 1);
       }
       p[-2] = ')';
       p[-1] = 0;
@@ -301,6 +305,11 @@ void Screen::varDoubleClicked(int row, int) {
    auto val = m_table->item(row, 1);
    
    if (')' == name[name.size() - 1]) { // array
+      auto v = reinterpret_cast<GVB::Array *>(val->data(Qt::UserRole).toLongLong());
+      ArrEditDialog dlg(this, v, Compiler::getIdType(name.toStdString()));
+      
+      dlg.setWindowTitle(name);
+      dlg.exec();
    } else {
       auto v = reinterpret_cast<GVB::Single *>(val->data(Qt::UserRole).toLongLong());
       auto type = Compiler::getIdType(name.toStdString());
