@@ -1462,7 +1462,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       else {
          evalPop(fc->expr3);
       }
-      if (m_top.rval < 1.0) {
+      if (m_top.rval < 0.0) {
          rerror("Illegal count in MID: %f", m_top.rval);
       }
       --offset;
