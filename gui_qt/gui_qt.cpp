@@ -66,8 +66,9 @@ void GuiQt::loadMenu() {
    m = menuBar()->addMenu(tr("程序"));
    m_mnuRun = m->addAction(tr("运行"), this, &GuiQt::run, QKeySequence(Qt::Key_F5));
    m_mnuStop = m->addAction(tr("停止"), this, &GuiQt::stop, QKeySequence(Qt::Key_F6));
+   m_mnuReload = m->addAction(tr("重新加载源文件"), this, &GuiQt::reload, QKeySequence(Qt::Key_F9));
    m->addSeparator();
-   m->addAction(tr("截图"), m_screen, &Screen::captureScreen, QKeySequence(Qt::Key_F9));
+   m->addAction(tr("截图"), m_screen, &Screen::captureScreen, QKeySequence(Qt::Key_F11));
    m->addSeparator();
    m->addAction(tr("重新加载配置文件"), m_screen, &Screen::loadConfig);
    
@@ -79,12 +80,14 @@ void GuiQt::loadMenu() {
    
    m_mnuRun->setEnabled(false);
    m_mnuStop->setEnabled(false);
+   m_mnuReload->setEnabled(false);
 }
 
 
 void GuiQt::loadFile() {
    if (m_screen->loadFile()) {
       m_mnuRun->setEnabled(true);
+      m_mnuReload->setEnabled(true);
    }
 }
 

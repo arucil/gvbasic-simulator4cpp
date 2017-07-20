@@ -34,7 +34,7 @@ private slots:
    
 private:
    Screen *m_screen;
-   QAction *m_mnuOpen, *m_mnuRun, *m_mnuStop;
+   QAction *m_mnuOpen, *m_mnuRun, *m_mnuStop, *m_mnuReload;
    
 };
 

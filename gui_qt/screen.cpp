@@ -25,16 +25,16 @@ using namespace std;
 #define k(s,r)  { Qt::Key_ ## s, r }
 
 const unordered_map<int, int> Screen::s_wqxKeyMap {
-   k(Escape, 27), k(F1, 28), k(F2, 29), k(F3, 30), k(F4, 31), k(Q, 'q'),
-   k(W, 'w'), k(E, 'e'), k(R, 'r'), k(T, 't'), k(Y, 'y'), k(U, 'u'),
-   k(I, 'i'), k(O, 'o'), k(P, 'p'), k(A, 'a'), k(S, 's'), k(D, 'd'),
-   k(F, 'f'), k(G, 'g'), k(H, 'h'), k(J, 'j'), k(K, 'k'), k(L, 'l'),
-   k(Return, 13), k(Z, 'z'), k(X, 'x'), k(C, 'c'), k(V, 'v'), k(B, 'b'),
-   k(N, 'n'), k(M, 'm'), k(PageUp, 19), k(PageDown, 14), k(Up, 20),
-   k(Down, 21), k(Left, 23), k(Right, 22), k(QuoteLeft, 25), k(Shift, 26),
-   k(Control, 18), k(0, '0'), k(Period, '.'), k(Space, ' '),
-   k(1, 'b'), k(2, 'n'), k(3, 'm'), k(4, 'g'), k(5, 'h'), k(6, 'j'),
-   k(7, 't'), k(8, 'y'), k(9, 'u'),
+   k(Escape, 27),   k(F1, 28),   k(F2, 29),      k(F3, 30),        k(F4, 31), k(Q, 'q'),
+   k(W, 'w'),       k(E, 'e'),   k(R, 'r'),      k(T, 't'),        k(Y, 'y'), k(U, 'u'),
+   k(I, 'i'),       k(O, 'o'),   k(P, 'p'),      k(A, 'a'),        k(S, 's'), k(D, 'd'),
+   k(F, 'f'),       k(G, 'g'),   k(H, 'h'),      k(J, 'j'),        k(K, 'k'), k(L, 'l'),
+   k(Return, 13),   k(Z, 'z'),   k(X, 'x'),      k(C, 'c'),        k(V, 'v'), k(B, 'b'),
+   k(N, 'n'),       k(M, 'm'),   k(PageUp, 19),  k(PageDown, 14),  k(Up, 20),
+   k(Down, 21),     k(Left, 23), k(Right, 22),   k(QuoteLeft, 25), k(Shift, 26),
+   k(Control, 18),  k(0, '0'),   k(Period, '.'), k(Space, ' '),
+   k(1, 'b'),       k(2, 'n'),   k(3, 'm'),      k(4, 'g'),        k(5, 'h'), k(6, 'j'),
+   k(7, 't'),       k(8, 'y'),   k(9, 'u'),
    k(Backspace, 29)
 };
 
