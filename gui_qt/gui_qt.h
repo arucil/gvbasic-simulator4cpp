@@ -27,6 +27,7 @@ private:
    
 private slots:
    void loadFile();
+   void reloadFile();
    void run();
    void stop();
    void showHelp();

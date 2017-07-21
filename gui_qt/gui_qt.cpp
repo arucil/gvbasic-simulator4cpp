@@ -10,6 +10,7 @@
 #include <QDesktopWidget>
 #include <QHeaderView>
 #include <QTableWidget>
+#include <QFileInfo>
 #include <thread>
 #include "screen.h"
 
@@ -66,7 +67,7 @@ void GuiQt::loadMenu() {
    m = menuBar()->addMenu(tr("程序"));
    m_mnuRun = m->addAction(tr("运行"), this, &GuiQt::run, QKeySequence(Qt::Key_F5));
    m_mnuStop = m->addAction(tr("停止"), this, &GuiQt::stop, QKeySequence(Qt::Key_F6));
-   m_mnuReload = m->addAction(tr("重新加载源文件"), this, &GuiQt::reload, QKeySequence(Qt::Key_F9));
+   m_mnuReload = m->addAction(tr("重新加载源文件"), this, &GuiQt::reloadFile, QKeySequence(Qt::Key_F9));
    m->addSeparator();
    m->addAction(tr("截图"), m_screen, &Screen::captureScreen, QKeySequence(Qt::Key_F11));
    m->addSeparator();
@@ -88,7 +89,13 @@ void GuiQt::loadFile() {
    if (m_screen->loadFile()) {
       m_mnuRun->setEnabled(true);
       m_mnuReload->setEnabled(true);
+      setWindowTitle(QFileInfo(m_screen->getOpenFile()).fileName());
    }
+}
+
+void GuiQt::reloadFile() {
+    if (m_screen->loadFile(true)) {
+    }
 }
 
 void GuiQt::keyPressEvent(QKeyEvent *e) {
@@ -106,6 +113,7 @@ void GuiQt::run() {
    case Screen::Result::Start:
       m_mnuStop->setEnabled(true);
       m_mnuOpen->setEnabled(false);
+      m_mnuReload->setEnabled(false);
       m_mnuRun->setText(tr("暂停"));
       break;
    case Screen::Result::Resume:
@@ -124,6 +132,7 @@ void GuiQt::stop() {
    m_screen->stop();
    m_mnuRun->setText(tr("运行"));
    m_mnuOpen->setEnabled(true);
+   m_mnuReload->setEnabled(true);
    m_mnuStop->setEnabled(false);
 }
 

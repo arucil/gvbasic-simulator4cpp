@@ -52,12 +52,16 @@ public:
    void endInput() override;
    
 public:
-   bool loadFile();
+   bool loadFile(bool bReload = false);
    Result run();
    void stop();
    
    void keyDown(QKeyEvent *);
    void keyUp(QKeyEvent *);
+
+   QString getOpenFile() const {
+       return m_openFile;
+   }
    
 private:
    void initFileDlg();
@@ -94,6 +98,7 @@ private:
    QImage m_img;
    int m_scale;
    QString m_error;
+   QString m_openFile;
    QBasicTimer m_timerUpdate;
    QTimer *m_timerBlink;
    QFileDialog m_fileDlg;

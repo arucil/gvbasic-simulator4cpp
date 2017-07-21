@@ -124,9 +124,12 @@ void Screen::initFileDlg() {
    m_fileDlg.setNameFilter(tr("Text File (*.txt)"));
 }
 
-bool Screen::loadFile() {
-   if (m_fileDlg.exec()) {
-      FILE *fp = fopen(m_fileDlg.selectedFiles().at(0).toStdString().c_str(), "rb");
+bool Screen::loadFile(bool bReload) {
+   if (bReload || m_fileDlg.exec()) {
+      FILE *fp = fopen((bReload ?
+                            m_openFile :
+                            (m_openFile = m_fileDlg.selectedFiles().at(0)))
+                       .toStdString().c_str(), "rb");
       if (nullptr == fp) {
          setError(tr("File open error"));
          return false;
@@ -135,13 +138,22 @@ bool Screen::loadFile() {
       try {
          m_gvb.build(fp);
       } catch (Exception &e) {
-         setError(QStringLiteral("%1(line:%2): %3").arg(e.label).arg(e.line).arg(QString::fromStdString(e.msg)));
+         setError(QStringLiteral("%1(line:%2): %3")
+                  .arg(e.label)
+                  .arg(e.line)
+                  .arg(QString::fromStdString(e.msg)));
+         fclose(fp);
          return false;
       }
-      
       fclose(fp);
+
       setError(QString());
-      m_status->setText(tr("Ready"));
+      if (bReload) {
+         m_status->setText(tr("Reloading done"));
+      } else {
+         m_status->setText(tr("Ready"));
+      }
+
       {
          lock_guard<mutex> lock(m_mutState);
          m_state = State::Ready;
