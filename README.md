@@ -13,7 +13,7 @@ GVBASIC模拟器的C++版本。（C++14 & Qt5）
 $ cd gui_qt
 $ qmake
 $ make
-$ mv gui_qt ../gvbsim && cd ..
+$ mv gvbsim .. && cd ..
 ```
 
 运行：  
