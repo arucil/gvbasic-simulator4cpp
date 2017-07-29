@@ -1181,6 +1181,14 @@ Value::Type Compiler::getIdType(const string &id) {
    }
 }
 
+Value::Type Compiler::getArrayType(const string &id) {
+   switch (id[id.find('(') - 1]) {
+   case '$': return Value::Type::STRING;
+   case '%': return Value::Type::INT;
+   default: return Value::Type::REAL;
+   }
+}
+
 inline const char *Compiler::getTypeSuffix(const std::string &s) {
    switch (s.back()) {
    case '$': return "$";

@@ -86,6 +86,7 @@ private:
 
 public:
    static Value::Type getIdType(const std::string &);
+   static Value::Type getArrayType(const std::string &);
    static Value::Type getIdRValType(const std::string &);
    static Value::Type getRValType(Value::Type);
 };

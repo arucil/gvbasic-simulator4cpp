@@ -322,7 +322,7 @@ void Screen::varDoubleClicked(int row, int) {
    
    if (')' == name[name.size() - 1]) { // array
       auto v = reinterpret_cast<GVB::Array *>(val->data(Qt::UserRole).toLongLong());
-      ArrEditDialog dlg(this, v, Compiler::getIdType(name.toStdString()));
+      ArrEditDialog dlg(this, v, Compiler::getArrayType(name.toStdString()));
       
       dlg.setWindowTitle(name);
       dlg.exec();
