@@ -415,7 +415,7 @@ string Device::input() {
             if (canDown)
                ++gbCurPage;
             break;
-         case 26: // Shift切换中英文
+         case 18: // Ctrl切换中英文
             inputMethod = IGui::InputMethod::EN;
             m_gui->switchIM(inputMethod);
             break;
@@ -431,7 +431,7 @@ string Device::input() {
          }
       } else { // 英文
          switch (getKey()) {
-         case 26:
+         case 18:
             inputMethod = IGui::InputMethod::CH;
             m_gui->switchIM(inputMethod);
             pySize = 0;
