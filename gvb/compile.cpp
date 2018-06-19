@@ -126,7 +126,7 @@ inline NewLine *Compiler::aLine() {
    int t = m_l.ival;
    match(Token::INT);
    if (t <= m_label)
-      cerror("Invalid label");
+      cerror("Label must be monotone increasing");
    m_label = t;
    if (m_labels.count(m_label))
       cerror("Label duplicate");

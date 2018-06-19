@@ -18,8 +18,11 @@ using namespace std;
 using namespace gvbsim;
 
 
+#define APP_NAME "GVBASIC模拟器"
+
+
 GuiQt::GuiQt() {
-   setWindowTitle(tr("GVBASIC模拟器"));
+   setWindowTitle(tr(APP_NAME));
    
    QWidget *central = new QWidget(this);
    
@@ -62,11 +65,11 @@ void GuiQt::loadMenu() {
    QMenu *m = menuBar()->addMenu(tr("文件"));
    m_mnuOpen = m->addAction(tr("打开"), this, &GuiQt::loadFile, QKeySequence::Open);
    m->addSeparator();
-   m->addAction(tr("退出"), qApp, &QApplication::quit, QKeySequence(Qt::ALT, Qt::Key_F4));
+   m->addAction(tr("退出"), qApp, &QApplication::quit, QKeySequence(Qt::ALT | Qt::Key_F4));
    
    m = menuBar()->addMenu(tr("程序"));
    m_mnuRun = m->addAction(tr("运行"), this, &GuiQt::run, QKeySequence(Qt::Key_F5));
-   m_mnuStop = m->addAction(tr("停止"), this, &GuiQt::stop, QKeySequence(Qt::Key_F6));
+   m_mnuStop = m->addAction(tr("停止"), this, &GuiQt::stop, QKeySequence(Qt::CTRL | Qt::Key_F6));
    m_mnuReload = m->addAction(tr("重新加载源文件"), this, &GuiQt::reloadFile, QKeySequence(Qt::Key_F9));
    m->addSeparator();
    m->addAction(tr("截图"), m_screen, &Screen::captureScreen, QKeySequence(Qt::Key_F11));
@@ -89,7 +92,7 @@ void GuiQt::loadFile() {
    if (m_screen->loadFile()) {
       m_mnuRun->setEnabled(true);
       m_mnuReload->setEnabled(true);
-      setWindowTitle(QFileInfo(m_screen->getOpenFile()).fileName());
+      setWindowTitle(APP_NAME " - " + QFileInfo(m_screen->getOpenFile()).fileName());
    }
 }
 
