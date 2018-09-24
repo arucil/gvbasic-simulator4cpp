@@ -97,7 +97,7 @@ inline void Compiler::resolveRefs() { //解决label引用
          break;
       }
       case Stmt::Type::RESTORE: {
-         Restore *r = static_cast<Restore *>(s);
+         auto r = static_cast<Restore *>(s);
          if (!m_labels.count(r->label)) {
             m_line = line;
             m_label = label;
@@ -132,7 +132,7 @@ inline NewLine *Compiler::aLine() {
       cerror("Label duplicate");
    m_dataMan.addLabel(m_label);
 
-   NewLine *s = m_nodeMan.make<NewLine>(m_label, m_line);
+   auto s = m_nodeMan.make<NewLine>(m_label, m_line);
    s->next = stmts();
    return m_labels[m_label] = s; //记录一行的第一条语句
 }
@@ -678,7 +678,7 @@ void Compiler::translateUserCall(Expr *e1, const string &s0, const string &s1) {
 
 inline Stmt *Compiler::printstmt() {
    peek();
-   Print *p1 = m_nodeMan.make<Print>();
+   auto p1 = m_nodeMan.make<Print>();
 
    while (m_tok != ':' && m_tok != 10 && m_tok != -1 && m_tok != Token::ELSE) {
       if (m_tok != ';' && m_tok != ',') {
@@ -690,15 +690,14 @@ inline Stmt *Compiler::printstmt() {
             match('(');
             Expr *e1 = expr(Value::Type::REAL);
             match(')');
-            p1->exprs.push_back(
-                  make_pair(m_nodeMan.make<FuncCall>(
-                           Token::SPC == t ? Func::Type::SPC : Func::Type::TAB,
-                           Value::Type::STRING, e1),
-                        Print::Delimiter::NO));
+            p1->exprs.emplace_back(m_nodeMan.make<FuncCall>(
+                       Token::SPC == t ? Func::Type::SPC : Func::Type::TAB,
+                       Value::Type::STRING, e1),
+                    Print::Delimiter::NO);
             break;
          }
          default:
-            p1->exprs.push_back(make_pair(expr(), Print::Delimiter::NO));
+            p1->exprs.emplace_back(expr(), Print::Delimiter::NO);
             break;
          }
       } else {
@@ -787,7 +786,7 @@ inline Stmt *Compiler::inputstmt() {
    if (m_tok == '#' || m_tok == Token::INT) { //file input
       int i1 = getFileNum();
       match(',');
-      FInput *f1 = m_nodeMan.make<FInput>(i1);
+      auto f1 = m_nodeMan.make<FInput>(i1);
       while (true) {
          f1->ids.push_back(getId());
          if (m_tok != ',')
@@ -803,7 +802,7 @@ inline Stmt *Compiler::inputstmt() {
          peek();
          match(';');
       }
-      Input *i = m_nodeMan.make<Input>(prompt);
+      auto i = m_nodeMan.make<Input>(prompt);
       while (true) {
          i->ids.push_back(getId());
          if (m_tok != ',')
@@ -818,7 +817,7 @@ inline Stmt *Compiler::writestmt() {
    peek();
    int i1 = getFileNum();
    match(',');
-   Write *w = m_nodeMan.make<Write>(i1);
+   auto w = m_nodeMan.make<Write>(i1);
    while (true) {
       w->exprs.push_back(expr());
       if (m_tok != ',')
@@ -930,7 +929,7 @@ inline Stmt *Compiler::fieldstmt() {
    int fnum = getFileNum();
    match(',');
 
-   Field *f1 = m_nodeMan.make<Field>(fnum);
+   auto f1 = m_nodeMan.make<Field>(fnum);
    int total = 0;
    while (true) {
       int size = m_l.ival;
@@ -941,7 +940,7 @@ inline Stmt *Compiler::fieldstmt() {
       if (getIdType(id) != Value::Type::STRING) {
          cerror("Need string Id in FIELD: [%s]", id);
       }
-      f1->fields.push_back(make_pair(size, id));
+      f1->fields.emplace_back(size, id);
       total += size;
       if (m_tok != ',')
          break;
@@ -968,7 +967,7 @@ inline Stmt *Compiler::findLabel(Goto *s) {
    if (i != m_labels.end()) {
       s->stm = i->second;
    } else {
-      m_refs.push_back(make_tuple(s, m_line, m_label));
+      m_refs.emplace_back(s, m_line, m_label);
    }
    return s;
 }
@@ -983,7 +982,7 @@ inline Stmt *Compiler::findLabel(Restore *s) {
 }
 
 inline Stmt *Compiler::findLabel(On *s) {
-   m_refs.push_back(make_tuple(s, m_line, m_label));
+   m_refs.emplace_back(s, m_line, m_label);
    return s;
 }
 
@@ -1252,7 +1251,7 @@ Ldefault:
           * 20 next
           * */
          if (cur->next != end && cur->next->type == Stmt::Type::FOR) {
-            Assign *a1 = static_cast<Assign *>(cur);
+            auto a1 = static_cast<Assign *>(cur);
 
             if (a1->val->type == Expr::Type::REAL) {
                Real *r = static_cast<Real *>(a1->val);
@@ -1276,7 +1275,7 @@ Ldefault:
 
                            m_nodeMan.destroy(r); // for i=X to n, remove X
                            a1->val = f1->dest; // for i=X to n  -->  i = n
-                           XSleep *s1 = m_nodeMan.make<XSleep>(a1->val);
+                           auto s1 = m_nodeMan.make<XSleep>(a1->val);
                            s1->next = f1->next;
                            a1->next = s1;
                            m_nodeMan.destroy(f1);

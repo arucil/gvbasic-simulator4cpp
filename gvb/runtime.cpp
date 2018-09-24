@@ -277,9 +277,9 @@ bool GVB::step() try {
          break;
 
       case Stmt::Type::LOAD: {
-         XLoad *l1 = static_cast<XLoad *>(s);
+         auto *l1 = static_cast<XLoad *>(s);
          evalPop(l1->addr);
-         uint16_t addr = static_cast<uint16_t>(m_top.rval);
+         auto addr = static_cast<uint16_t>(m_top.rval);
          for (auto i : l1->values) {
             m_device.poke(addr++, i);
          }
@@ -287,7 +287,7 @@ bool GVB::step() try {
       }
 
       case Stmt::Type::FPUTC: {
-         XFputc *p1 = static_cast<XFputc *>(s);
+         auto *p1 = static_cast<XFputc *>(s);
          auto &file = m_files[p1->fnum];
          if (!file.isOpen()) {
             rerror("File not open: FPUTC #%i", p1->fnum + 1);
@@ -306,7 +306,7 @@ bool GVB::step() try {
       }
 
       case Stmt::Type::FSEEK: {
-         XFseek *p1 = static_cast<XFseek *>(s);
+         auto *p1 = static_cast<XFseek *>(s);
          auto &file = m_files[p1->fnum];
          if (!file.isOpen()) {
             rerror("File not open: FSEEK #%i", p1->fnum + 1);
@@ -333,9 +333,9 @@ bool GVB::step() try {
          }
 
          evalPop(p1->addr);
-         uint16_t addr = static_cast<uint16_t>(m_top.rval);
+         auto addr = static_cast<uint16_t>(m_top.rval);
          evalPop(p1->size);
-         for (size_t i = static_cast<size_t>(m_top.rval); !file.eof() && i-- > 0; ) {
+         for (auto i = static_cast<size_t>(m_top.rval); !file.eof() && i-- > 0; ) {
             m_device.poke(addr++, static_cast<uint8_t>(file.readByte()));
          }
          break;
@@ -353,9 +353,9 @@ bool GVB::step() try {
          }
 
          evalPop(p1->addr);
-         uint16_t addr = static_cast<uint16_t>(m_top.rval);
+         auto addr = static_cast<uint16_t>(m_top.rval);
          evalPop(p1->size);
-         for (size_t i = static_cast<size_t>(m_top.rval); i-- > 0; ) {
+         for (auto i = static_cast<size_t>(m_top.rval); i-- > 0; ) {
             file.writeByte(static_cast<char>(m_device.peek(addr++)));
          }
          break;
@@ -564,7 +564,7 @@ inline Stmt *GVB::exe_while(While *w1) {
       }
       return nullptr;
    } else {
-      m_loops.push_back(Loop(w1));
+      m_loops.emplace_back(w1);
       return w1->next;
    }
 }
@@ -650,7 +650,7 @@ inline Stmt *GVB::exe_on(On *on1) {
          if (m_subs.size() >= UINT16_MAX) {
             rerror("Stack overflow in ON-GOSUB");
          }
-         m_subs.push_back(Sub(m_line, m_label, on1->next));
+         m_subs.emplace_back(m_line, m_label, on1->next);
       }
 
       return on1->addrs[static_cast<size_t>(m_top.rval - 1)].stm;
@@ -674,7 +674,7 @@ inline void GVB::exe_locate(Locate *lc1) {
    if (!inRangeCO(m_top.rval, 1, 21)) {
       rerror("Illegal argument in LOCATE: col=%f", m_top.rval);
    }
-   uint8_t col = static_cast<uint8_t>(m_top.rval - 1);
+   auto col = static_cast<uint8_t>(m_top.rval - 1);
    if (nullptr == lc1->row && m_device.getX() > col) {
       m_device.nextRow();
    }
@@ -687,7 +687,7 @@ inline void GVB::exe_poke(Poke *p1) {
    if (!inRangeCO(m_top.rval, 0, UINT16_MAX + 1)) {
       rerror("Illegal address in POKE: %f", m_top.rval);
    }
-   uint16_t addr = static_cast<uint16_t>(m_top.rval);
+   auto addr = static_cast<uint16_t>(m_top.rval);
 
    evalPop(p1->val);
    if (!inRangeCO(m_top.rval, 0, UINT8_MAX + 1)) {
@@ -1093,7 +1093,7 @@ inline void GVB::exe_ellipse(Ellipse *c1) {
 
 inline void GVB::exe_paint(XPaint *p1) {
    evalPop(p1->addr);
-   uint16_t addr = static_cast<uint16_t>(m_top.rval);
+   auto addr = static_cast<uint16_t>(m_top.rval);
 
    evalPop(p1->x);
    int x = static_cast<int>(m_top.rval);
@@ -1102,10 +1102,10 @@ inline void GVB::exe_paint(XPaint *p1) {
    int y = static_cast<int>(m_top.rval);
 
    evalPop(p1->w);
-   uint8_t w = static_cast<uint8_t>(m_top.rval);
+   auto w = static_cast<uint8_t>(m_top.rval);
 
    evalPop(p1->h);
-   uint8_t h = static_cast<uint8_t>(m_top.rval);
+   auto h = static_cast<uint8_t>(m_top.rval);
 
    Device::PaintMode mode;
    if (nullptr == p1->mode)
@@ -1132,7 +1132,7 @@ void GVB::eval(Expr *e1) {
       auto &val = getValue(static_cast<Id *>(e1));
 
       if (Value::Type::INT == e1->vtype)
-         m_stack.push_back(Single(static_cast<double>(val.ival)));
+         m_stack.emplace_back(static_cast<double>(val.ival));
       else
          m_stack.push_back(val);
       break;
@@ -1140,15 +1140,15 @@ void GVB::eval(Expr *e1) {
 
    case Expr::Type::REAL:
       // 编译时确保rval一定有效，不需要再检查
-      m_stack.push_back(Single(static_cast<Real *>(e1)->rval));
+      m_stack.emplace_back(static_cast<Real *>(e1)->rval);
       break;
 
    case Expr::Type::STRING:
-      m_stack.push_back(Single(static_cast<Str *>(e1)->sval));
+      m_stack.emplace_back(static_cast<Str *>(e1)->sval);
       break;
 
    case Expr::Type::INKEY:
-      m_stack.push_back(Single(string(1u, static_cast<char>(m_device.getKey()))));
+      m_stack.emplace_back(string(1u, static_cast<char>(m_device.getKey())));
       break;
 
    case Expr::Type::FUNCCALL:
@@ -1194,7 +1194,7 @@ GVB::Single &GVB::getValue(Id *id1) {
          rerror("Bad index in array: %s 0[%f]", ac1->id, m_top.rval);
       }
 
-      unsigned total = static_cast<unsigned>(m_top.rval);
+      auto total = static_cast<unsigned>(m_top.rval);
       for (size_t i = 1; i < ac1->indices.size(); ++i) {
          evalPop(ac1->indices[i]);
          if (!inRangeCO(m_top.rval, 0, a1.bounds[i])) {
@@ -1378,7 +1378,7 @@ inline void GVB::eval_func(FuncCall *fc) {
          rerror("Illegal argument in MKI: %f",
                 m_stack.back().rval);
       }
-      int16_t s1 = static_cast<int16_t>(m_stack.back().rval);
+      auto s1 = static_cast<int16_t>(m_stack.back().rval);
       m_stack.back().sval.assign(reinterpret_cast<char *>(&s1),
                                  reinterpret_cast<char *>(&s1) + 2);
       break;
@@ -1434,7 +1434,7 @@ inline void GVB::eval_func(FuncCall *fc) {
       if (m_top.rval < 0) {
          rerror("Illegal count in RIGHT: %f", m_top.rval);
       }
-      unsigned size = static_cast<unsigned>(m_stack.back().sval.size());
+      auto size = static_cast<unsigned>(m_stack.back().sval.size());
       if (size > m_top.rval) {
          m_stack.back().sval.erase(0, size - static_cast<unsigned>(m_top.rval));
       }
@@ -1464,7 +1464,7 @@ inline void GVB::eval_func(FuncCall *fc) {
                 m_top.rval, m_stack.back().sval,
                 static_cast<int>(s.size()));
       }
-      unsigned offset = static_cast<unsigned>(m_top.rval);
+      auto offset = static_cast<unsigned>(m_top.rval);
 
       if (nullptr == fc->expr3)
          m_top.rval = 1.;
@@ -1475,7 +1475,7 @@ inline void GVB::eval_func(FuncCall *fc) {
          rerror("Illegal count in MID: %f", m_top.rval);
       }
       --offset;
-      unsigned count = static_cast<unsigned>(m_top.rval);
+      auto count = static_cast<unsigned>(m_top.rval);
       if (offset + count > s.size())
          count = static_cast<unsigned>(s.size() - offset);
       s = s.substr(offset, count);

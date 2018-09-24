@@ -27,7 +27,7 @@ public:
    Stmt * next;
 
 public:
-   Stmt(Type type)
+   explicit Stmt(Type type)
          : type(type), next(nullptr) { }
 };
 
@@ -61,7 +61,7 @@ struct Str : Expr { // 字符串常量
    std::string sval;
 
 public:
-   Str(const std::string &s)
+   explicit Str(const std::string &s)
          : Expr(Type::STRING, Value::Type::STRING),
            sval(s) { }
 };
@@ -70,7 +70,7 @@ struct Real : Expr { // 实数常量
    double rval;
 
 public:
-   Real(double d)
+   explicit Real(double d)
          : Expr(Type::REAL, Value::Type::REAL),
            rval(d) { }
 };
