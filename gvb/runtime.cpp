@@ -399,7 +399,7 @@ inline void GVB::exe_dim(Dim *d1) {
    }
 
    case Expr::Type::ARRAYACCESS: {
-      ArrayAccess *ac1 = static_cast<ArrayAccess *>(id1);
+      auto *ac1 = static_cast<ArrayAccess *>(id1);
       if (m_envArray.count(id1->id)) {
          rerror("Redefined array: %s", id1->id);
       }
@@ -446,19 +446,28 @@ inline void GVB::exe_assign(Assign *a1) {
 }
 
 inline void GVB::exe_for(For *f1) {
+   // 如果之前存在同一个for循环(由同一个for语句所创建的for循环), 就再创建一个同名的for循环
+   // 如果之前存在同名循环但不是同一个for循环, 就清除包括这个for循环在内的所有内层循环
+
    if (m_loops.size()) {
       // 查找是否存在自变量相同的for循环，如果存在则要清除
       auto i = m_loops.end();
       do {
          --i;
          if (i->stmt->type == Stmt::Type::FOR && i->_for.stmt->var == f1->var) {
-            // 清空内层循环及本循环
-            m_loops.erase(i, m_loops.end());
+             if (i->_for.stmt == f1) {
+                 // 如果是同一个for循环, 不清空本循环, 只清空内层循环
+                 m_loops.erase(i + 1, m_loops.end());
+             } else {
+                 // 清空内层循环及本循环
+                 m_loops.erase(i, m_loops.end());
+             }
             break;
          }
       } while (i != m_loops.begin());
    }
-   m_loops.push_back(Loop(f1));
+
+   m_loops.emplace_back(f1);
 
    auto &top = m_loops.back();
    top.line = m_line;
@@ -491,7 +500,7 @@ inline Stmt *GVB::exe_next(Next *n1) {
    }
 
    if (m_loops.empty()) {
-      rerror("Next without for: NEXT %s", n1->var);
+      rerror("Next withouts for: NEXT %s", n1->var);
    }
    auto &top = m_loops.back();
 
