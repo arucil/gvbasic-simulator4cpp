@@ -1,6 +1,6 @@
 /.idea
-/bas
-/dat
+/bas_files
+/dat_files
 /cmake-build*
 /gui_qt/build-*
 /gui_qt/gui_qt.pro.user*

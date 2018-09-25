@@ -799,7 +799,7 @@ inline void GVB::exe_open(Open *o1) {
 
    evalPop(o1->fname);
 
-   string fname = "dat/" + m_top.sval;
+   string fname = "dat_files/" + m_top.sval;
    auto sz = fname.size();
    if (sz < 8 || (fname.back() | 32) != 't'
          || (fname[sz - 2] | 32) != 'a' || (fname[sz - 3] | 32) != 'd'
